@@ -206,7 +206,7 @@ trait HasJsonSchema
      */
     public function getJsonSchemaAttributes()
     {
-        return array_reduce(array_keys($this->getCasts()), function($attributes, $key) {
+        return array_reduce(array_keys($this->casts), function($attributes, $key) {
             if ($this->getCastType($key) === 'json_schema') {
                 $attributes[] = $key;
             }
