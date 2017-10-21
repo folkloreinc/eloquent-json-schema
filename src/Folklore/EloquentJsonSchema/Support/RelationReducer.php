@@ -35,7 +35,7 @@ abstract class RelationReducer extends Reducer
         // Fallback to query if not found in relations and model doesn't exists
         if ($this->shouldQueryRelation($model, $node, $state, $value)) {
             $relationClass = $this->getRelationClass($model, $node, $state);
-            $value = app($relationClass)->find($id);
+            $value = $relationClass::findOrFail($id);
         }
 
         $state = Utils::setPath($state, $node->path, $value);
@@ -224,7 +224,7 @@ abstract class RelationReducer extends Reducer
         $relationId = $this->getRelationIdFromObject($relation, $object);
         if (!is_null($relationId)) {
             $relationModel = $model->{$relation}()->getModel();
-            $modelToUpdate = $relationModel::find($relationId);
+            $modelToUpdate = $relationModel::findOrFail($relationId);
             if (!is_null($modelToUpdate)) {
                 $modelToUpdate->fill((array)$object);
                 $modelToUpdate->save();
@@ -308,7 +308,6 @@ abstract class RelationReducer extends Reducer
         if ($relationClass instanceof HasOneOrMany) {
             $method = method_exists($relationClass, 'getForeignKeyName') ?
                 'getForeignKeyName' : 'getPlainForeignKey';
-            dump(get_class($item));
             $item->setAttribute($relationClass->$method(), $model->id);
             foreach ($pivot as $column => $value) {
                 $item->setAttribute($column, $value);
@@ -327,7 +326,6 @@ abstract class RelationReducer extends Reducer
         if ($relationClass instanceof HasOneOrMany) {
             $method = method_exists($relationClass, 'getForeignKeyName') ?
                 'getForeignKeyName' : 'getPlainForeignKey';
-            dump(get_class($item));
             $item->setAttribute($relationClass->$method(), null);
             foreach ($pivot as $column => $value) {
                 $item->setAttribute($column, $value);
