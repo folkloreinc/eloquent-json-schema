@@ -239,7 +239,9 @@ abstract class RelationReducer extends Reducer
             return $this->{$method}($model, $relation, $path, $item);
         }
         $this->detachRelationAtPath($model, $relation, $path);
-        $this->attachRelationAtPath($model, $relation, $path, $item);
+        if (!is_null($item)) {
+            $this->attachRelationAtPath($model, $relation, $path, $item);
+        }
     }
 
     protected function updateRelationsAtPathWithItems($model, $relation, $path, $items)
