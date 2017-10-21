@@ -306,7 +306,9 @@ abstract class RelationReducer extends Reducer
     {
         $relationClass = $model->{$relation}();
         if ($relationClass instanceof HasOneOrMany) {
-            $item->setAttribute($relationClass->getForeignKeyName(), $model->id);
+            $method = method_exists($relationClass, 'getForeignKeyName') ?
+                'getForeignKeyName' : 'getPlainForeignKey';
+            $item->setAttribute($relationClass->$method(), $model->id);
             foreach ($pivot as $column => $value) {
                 $item->setAttribute($column, $value);
             }
@@ -322,7 +324,9 @@ abstract class RelationReducer extends Reducer
         $column = $this->getRelationPathColumn($relation);
         $relationClass = $model->{$relation}();
         if ($relationClass instanceof HasOneOrMany) {
-            $item->setAttribute($relationClass->getForeignKeyName(), null);
+            $method = method_exists($relationClass, 'getForeignKeyName') ?
+                'getForeignKeyName' : 'getPlainForeignKey';
+            $item->setAttribute($relationClass->$method(), null);
             foreach ($pivot as $column => $value) {
                 $item->setAttribute($column, $value);
             }
