@@ -51,15 +51,11 @@ abstract class RelationReducer extends Reducer
 
         $originalValue = Utils::getPath($state, $node->path);
         if (is_null($originalValue) || (!is_object($originalValue) && !is_array($originalValue))) {
-            echo '----------------'.PHP_EOL;
-            var_dump($state);
             return $state;
         }
 
         $relationName = $this->getRelationName($model, $node, $state);
         $value = $this->mutateRelationObjectToId($model, $relationName, $originalValue);
-        echo '----------------'.PHP_EOL;
-        var_dump($value);
 
         $state = Utils::setPath($state, $node->path, $value);
         return $state;
