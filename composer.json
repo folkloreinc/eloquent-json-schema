@@ -36,12 +36,6 @@
     "satooshi/php-coveralls": "^1.0",
     "php-mock/php-mock-phpunit": "^1.1|^2.0"
   },
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "git://github.com/orchestral/phpseclib.git"
-    }
-  ],
   "autoload": {
     "classmap": [
       "tests/"
