@@ -35,7 +35,6 @@ abstract class RelationReducer extends Reducer
         // Fallback to query if not found in relations and model doesn't exists
         if ($this->shouldQueryRelation($model, $node, $state, $value)) {
             $relationClass = $this->getRelationClass($model, $node, $state);
-            dd($model);
             $value = app($relationClass)->find($id)->first();
         }
 
@@ -52,11 +51,15 @@ abstract class RelationReducer extends Reducer
 
         $originalValue = Utils::getPath($state, $node->path);
         if (is_null($originalValue) || (!is_object($originalValue) && !is_array($originalValue))) {
+            echo '----------------'.PHP_EOL;
+            var_dump($state);
             return $state;
         }
 
         $relationName = $this->getRelationName($model, $node, $state);
         $value = $this->mutateRelationObjectToId($model, $relationName, $originalValue);
+        echo '----------------'.PHP_EOL;
+        var_dump($value);
 
         $state = Utils::setPath($state, $node->path, $value);
         return $state;
