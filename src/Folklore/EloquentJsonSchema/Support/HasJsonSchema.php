@@ -97,8 +97,9 @@ trait HasJsonSchema
      * @param  \Folklore\EloquentJsonSchema\Contracts\JsonSchema  $schema
      * @return string
      */
-    protected function castAttributeAsJsonSchema($value, $schema)
+    protected function castAttributeAsJsonSchema($key, $value)
     {
+        $schema = $this->getAttributeJsonSchema($key);
         return $this->callJsonSchemaReducers($schema, 'set', $value);
     }
 
@@ -136,31 +137,23 @@ trait HasJsonSchema
     }
 
     /**
-     * Determine whether a value is JSON castable for inbound manipulation.
-     *
-     * @param  string  $key
-     * @return bool
-     */
-    protected function isJsonCastable($key)
-    {
-        return parent::isJsonCastable($key) || $this->hasCast($key, ['json_schema']);
-    }
-
-    /**
-     * Cast the given attribute to JSON.
+     * Set a given attribute on the model.
      *
      * @param  string  $key
      * @param  mixed  $value
-     * @return string
+     * @return $this
      */
-    protected function castAttributeAsJson($key, $value)
+    public function setAttribute($key, $value)
     {
         if ($this->hasJsonSchema($key)) {
-            $schema = $this->getAttributeJsonSchema($key);
-            $value = $this->castAttributeAsJsonSchema($value, $schema);
+            $value = $this->castAttributeAsJsonSchema($key, $value);
+            if (method_exists($this, 'castAttributeAsJson')) {
+                $value = $this->castAttributeAsJson($key, $value);
+            } else {
+                $value = $this->asJson($value);
+            }
         }
-
-        return parent::castAttributeAsJson($key, $value);
+        return parent::setAttribute($key, $value);
     }
 
     /**
