@@ -277,7 +277,7 @@ abstract class RelationReducer extends Reducer
 
         $pathColumn = $this->getRelationPathColumn($relation);
         $currentItems = $model->{$relation}()->wherePivot($pathColumn, 'like', $path.'%')->get();
-        if ($currentItems->isNotEmpty()) {
+        if (!$currentItems->isEmpty()) {
             $pathColumn = $this->getRelationPathColumn($relation);
             $currentItems->each(function ($item) use ($model, $relation, $pathColumn) {
                 $this->detachRelationFromModel($model, $relation, $item, [
