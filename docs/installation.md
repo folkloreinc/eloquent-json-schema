@@ -1,7 +1,7 @@
 Installation
 ================================================
 
-#### Dependencies:
+#### Dependencies
 
 * [Laravel 5.x](https://github.com/laravel/laravel) or [Lumen](https://github.com/laravel/lumen)
 * [JSON Schema](https://github.com/justinrainbow/json-schema)
