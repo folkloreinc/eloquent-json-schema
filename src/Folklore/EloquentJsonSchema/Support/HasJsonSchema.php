@@ -25,6 +25,11 @@ trait HasJsonSchema
         return config('json-schema.reducers', []);
     }
 
+    /**
+     * Validate data against JSON Schema
+     *
+     * @return void
+     */
     public function validateJsonSchemaAttributes()
     {
         $validator = app(JsonSchemaValidator::class);
@@ -38,6 +43,11 @@ trait HasJsonSchema
         }
     }
 
+    /**
+     * Save JSON Schema
+     *
+     * @return void
+     */
     public function saveJsonSchemaAttributes()
     {
         $attributes = $this->getJsonSchemaAttributes();
@@ -68,6 +78,7 @@ trait HasJsonSchema
         }
         $interface = $interfaces[$method];
 
+        // Get reducers
         $reducers = array_merge(
             static::getGlobalJsonSchemaReducers(),
             array_where(array_values($this->getJsonSchemaReducers()), function ($reducer) {
@@ -100,7 +111,15 @@ trait HasJsonSchema
     protected function castAttributeAsJsonSchema($key, $value)
     {
         $schema = $this->getAttributeJsonSchema($key);
-        return $this->callJsonSchemaReducers($schema, 'set', $value);
+        $value = $this->callJsonSchemaReducers($schema, 'set', $value);
+
+        if (method_exists($this, 'castAttributeAsJson')) {
+            $value = $this->castAttributeAsJson($key, $value);
+        } else {
+            $value = $this->asJson($value);
+        }
+
+        return $value;
     }
 
     /**
@@ -147,11 +166,6 @@ trait HasJsonSchema
     {
         if ($this->hasJsonSchema($key)) {
             $value = $this->castAttributeAsJsonSchema($key, $value);
-            if (method_exists($this, 'castAttributeAsJson')) {
-                $value = $this->castAttributeAsJson($key, $value);
-            } else {
-                $value = $this->asJson($value);
-            }
         }
         return parent::setAttribute($key, $value);
     }
@@ -263,6 +277,26 @@ trait HasJsonSchema
             $this->jsonSchemasReducers = $reducers;
         } else {
             $this->jsonSchemasReducers[$key] = $reducers;
+        }
+        return $this;
+    }
+
+    /**
+     * Add a JSON schemas reducer.
+     *
+     * @param  array|string  $key
+     * @param  string|callable|null  $reducer
+     * @return $this
+     */
+    public function addJsonSchemaReducer($key, $reducer = null)
+    {
+        if (is_null($reducer)) {
+            $this->jsonSchemasReducers[] = $reducer;
+        } else {
+            if (!array_key_exists($key, $this->jsonSchemasReducers)) {
+                $this->jsonSchemasReducers[$key] = [];
+            }
+            $this->jsonSchemasReducers[$key][] = $reducer;
         }
         return $this;
     }

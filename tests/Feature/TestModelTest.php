@@ -1,6 +1,6 @@
 <?php
 
-class EloquentJsonSchemaTest extends TestCase
+class TestModelTest extends TestCase
 {
     use RunMigrationsTrait;
 
@@ -22,15 +22,15 @@ class EloquentJsonSchemaTest extends TestCase
             'type' => 'test',
             'name' => 'Test',
         ];
-        $dataWithSlug = array_merge([], $data, [
+        $rawData = array_merge([], $data, [
             'slug' => str_slug($data['name']),
         ]);
         $model = new TestModel();
         $model->data = $data;
         $model->save();
 
-        $this->assertEquals($model->data, $dataWithSlug);
-        $this->assertEquals($model->getAttributes()['data'], json_encode($dataWithSlug));
+        $this->assertEquals($rawData, $model->data);
+        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
     }
 
     /**
@@ -64,18 +64,41 @@ class EloquentJsonSchemaTest extends TestCase
         $child->data = $childData;
         $child->save();
 
+        // Add children
         $data = [
             'type' => 'test',
             'name' => 'Test',
-            'children' => [$child],
-            'child' => $child
+            'children' => [$child]
         ];
+        $rawData = array_merge([], $data, [
+            'children' => [(string)$child->id],
+            'slug' => str_slug($data['name']),
+        ]);
         $model = new TestModel();
         $model->data = $data;
         $model->save();
         $model->load('children');
 
-        $this->assertEquals($model->data['child']->id, $child->id);
-        $this->assertEquals($model->data['children'][0]->id, $child->id);
+        $this->assertEquals($child->id, $model->data['children'][0]->id);
+        $this->assertEquals($child->id, $model->children[0]->id);
+        $this->assertEquals('children.0', $model->children[0]->test_handle);
+        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+
+        // Remove children
+        $data = [
+            'type' => 'test',
+            'name' => 'Test',
+            'children' => []
+        ];
+        $rawData = array_merge([], $data, [
+            'slug' => str_slug($data['name']),
+        ]);
+        $model = new TestModel();
+        $model->data = $data;
+        $model->save();
+        $model->load('children');
+        $this->assertEquals(0, sizeof($model->data['children']));
+        $this->assertEquals(0, sizeof($model->children));
+        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
     }
 }
