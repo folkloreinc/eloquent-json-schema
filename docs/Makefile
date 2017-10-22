@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = python -msphinx
+SPHINXBUILD   = /usr/local/bin/python2 -msphinx
 SPHINXPROJ    = EloquentJSONSchema
 SOURCEDIR     = .
 BUILDDIR      = _build

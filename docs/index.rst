@@ -10,6 +10,7 @@ Welcome to Eloquent JSON Schema's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   intro
 
 
 Indices and tables
