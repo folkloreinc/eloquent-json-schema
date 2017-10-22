@@ -8,9 +8,10 @@ Welcome to Eloquent JSON Schema's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Documentation:
 
-   intro
+   installation
+   getting-started
 
 
 Indices and tables
