@@ -108,10 +108,15 @@ trait HasJsonSchema
             $schema->getReducers()
         );
 
-        $nodesCollection = $schema->getNodesFromData($value)->prependPath($key);
-        $data = [];
-        $data[$key] = is_object($value) ? clone $value : $value;
-        $data = $nodesCollection->reduce(function ($value, $node) use ($reducers, $interface, $method) {
+        // Here we get all nodes from the data and reduce a new value through the reducers.
+        // The value is namespaced so in a reducer you get a $node->path prefixed with the
+        // attribute name.
+        $nodesCollection = $schema->getNodesFromData($value)
+            ->prependPath($key);
+        $namespacedValue = [
+            $key => is_object($value) ? clone $value : $value
+        ];
+        $reducedValue = $nodesCollection->reduce(function ($value, $node) use ($reducers, $interface, $method) {
             foreach ($reducers as $reducer) {
                 $reducer = is_string($reducer) ? app($reducer) : $reducer;
                 if ($reducer instanceof $interface) {
@@ -121,8 +126,8 @@ trait HasJsonSchema
                 }
             }
             return $value;
-        }, $data);
-        return $data[$key];
+        }, $namespacedValue);
+        return $reducedValue[$key];
     }
 
     /**
@@ -342,63 +347,136 @@ trait HasJsonSchema
         return $this;
     }
 
-
+    /**
+     * Get disabled attributes
+     *
+     * @return array
+     */
     public function getDisabledJsonSchemasAttributes()
     {
         return $this->disabledJsonSchemasAttributes;
     }
 
+    /**
+     * Set disabled attributes
+     *
+     * @param  array  $disabled
+     * @return array
+     */
     public function setDisabledJsonSchemasAttributes(array $disabled)
     {
         $this->disabledJsonSchemasAttributes = $disabled;
         return $this;
     }
-    public function addDisabledJsonSchemaAttribute($field = null)
+
+    /**
+     * Add a disabled attribute
+     *
+     * @param  string|null  $attribute
+     * @return array
+     */
+    public function addDisabledJsonSchemaAttribute($attribute = null)
     {
         $this->disabledJsonSchemasAttributes = array_merge(
             $this->disabledJsonSchemasAttributes,
-            is_array($field) ? $field : func_get_args()
+            is_array($attribute) ? $attribute : func_get_args()
         );
     }
+
+    /**
+     * Get enabled attributes
+     *
+     * @return array
+     */
     public function getEnabledJsonSchemasAttributes()
     {
         return $this->enabledJsonSchemasAttributes;
     }
+
+    /**
+     * Set enabled attributes
+     *
+     * @param  array  $enabled
+     * @return array
+     */
     public function setEnabledJsonSchemasAttributes(array $enabled)
     {
         $this->enabledJsonSchemasAttributes = $enabled;
         return $this;
     }
-    public function addEnabledJsonSchemaAttribute($field = null)
+
+    /**
+     * Add a enabled attribute
+     *
+     * @param  string|null  $attribute
+     * @return array
+     */
+    public function addEnabledJsonSchemaAttribute($attribute = null)
     {
         $this->enabledJsonSchemasAttributes = array_merge(
             $this->enabledJsonSchemasAttributes,
-            is_array($field) ? $field : func_get_args()
+            is_array($attribute) ? $attribute : func_get_args()
         );
     }
-    public function makeJsonSchemaAttributeEnabled($field)
+
+    /**
+     * Make attribute enabled
+     *
+     * @param  string  $attribute
+     * @return array
+     */
+    public function makeJsonSchemaAttributeEnabled($attribute)
     {
-        $this->disabledJsonSchemasAttributes = array_diff($this->disabledJsonSchemasAttributes, (array) $field);
+        $this->disabledJsonSchemasAttributes = array_diff(
+            $this->disabledJsonSchemasAttributes,
+            (array) $attribute
+        );
         if (! empty($this->enabledJsonSchemasAttributes)) {
-            $this->addEnabledJsonSchemasAttribute($field);
+            $this->addEnabledJsonSchemasAttribute($attribute);
         }
         return $this;
     }
-    public function makeJsonSchemaAttributeDisabled($field)
+
+    /**
+     * Make attribute disabled
+     *
+     * @param  string  $attribute
+     * @return array
+     */
+    public function makeJsonSchemaAttributeDisabled($attribute)
     {
-        $field = (array) $field;
-        $this->enabledJsonSchemasAttributes = array_diff($this->enabledJsonSchemasAttributes, $field);
-        $this->disabledJsonSchemasAttributes = array_unique(array_merge($this->disabledJsonSchemasAttributes, $field));
+        $attribute = (array)$attribute;
+        $this->enabledJsonSchemasAttributes = array_diff(
+            $this->enabledJsonSchemasAttributes,
+            $attribute
+        );
+        $this->disabledJsonSchemasAttributes = array_unique(array_merge(
+            $this->disabledJsonSchemasAttributes,
+            $attribute
+        ));
         return $this;
     }
+
+    /**
+     * Disabled all attributes
+     *
+     * @return void
+     */
     public function disableAllJsonSchemasAttributes()
     {
         $attributes = $schema->getJsonSchemaAttributes();
         $this->makeJsonSchemaAttributeDisabled($attributes);
     }
-    public function isJsonSchemaAttributeDisabled($field)
+
+    /**
+     * Check if an attribute is disabled
+     *
+     * @param  string  $attribute
+     * @return boolean
+     */
+    public function isJsonSchemaAttributeDisabled($attribute)
     {
         $disabled = $this->getDisabledJsonSchemasAttributes();
-        return in_array($field, $disabled);
+        return in_array($attribute, $disabled);
     }
 }
