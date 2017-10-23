@@ -50,15 +50,15 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Eloquent JSON Schema'
-copyright = u'2017, Folklore,David Mongeau-Petitpas'
-author = u'Folklore,David Mongeau-Petitpas'
+copyright = u'2017, Folklore'
+author = u'Folklore'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = u'0.9.0'
+version = u'0.9'
 # The full version, including alpha/beta/rc tags.
 release = u'0.9.0'
 
