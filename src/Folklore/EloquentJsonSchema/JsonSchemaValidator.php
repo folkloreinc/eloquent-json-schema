@@ -29,8 +29,7 @@ class JsonSchemaValidator
             return true;
         }
         $name = $parameters[0];
-        $namespace = array_get($parameters, 1, null);
-        $schema = app('panneau')->schema($name, $namespace);
+        $schema = is_string($name) ? app($name) : $name;
         return $this->validateSchema($value, $schema);
     }
 

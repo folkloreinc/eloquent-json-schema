@@ -25,6 +25,7 @@ class JsonSchemaServiceProvider extends BaseServiceProvider
     public function boot()
     {
         $this->bootPublishes();
+        $this->bootValidator();
     }
 
     public function bootPublishes()
@@ -49,6 +50,14 @@ class JsonSchemaServiceProvider extends BaseServiceProvider
         $this->publishes([
             $langPath => base_path('resources/lang/vendor/folklore/eloquent-json-schema')
         ], 'lang');
+    }
+
+    public function bootValidator()
+    {
+        $this->app['validator']->extend(
+            'json_schema',
+            \Folklore\EloquentJsonSchema\Contracts\JsonSchemaValidator::class.'@validate'
+        );
     }
 
     /**

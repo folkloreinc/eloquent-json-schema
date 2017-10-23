@@ -125,13 +125,14 @@ trait HasJsonSchema
     /**
      * Decode the given JSON Schema back into an array or object.
      *
-     * @param  string  $value
      * @param  \Folklore\EloquentJsonSchema\Contracts\JsonSchema  $schema
+     * @param  string  $value
+     * @param  boolean  $asObject
      * @return mixed
      */
-    public function fromJsonSchema($value, $schema)
+    public function fromJsonSchema($schema, $value, $asObject = false)
     {
-        $value = $this->fromJson($value);
+        $value = $this->fromJson($value, $asObject);
         return $this->callJsonSchemaReducers($schema, 'get', $value);
     }
 
@@ -146,10 +147,13 @@ trait HasJsonSchema
     {
         $value = parent::castAttribute($key, $value);
         switch ($this->getCastType($key)) {
-            case 'json_schema':
+            case 'array:json_schema':
+            case 'object:json_schema':
+                list($type) = explode(':', $this->getCastType($key));
+                $asObject = $type === 'object';
                 $schema = $this->getAttributeJsonSchema($key);
                 return !is_null($schema) ?
-                    $this->fromJsonSchema($value, $schema) : $this->fromJson($value);
+                    $this->fromJsonSchema($schema, $value, $asObject) : $this->fromJson($value, $asObject);
             default:
                 return $value;
         }
@@ -214,7 +218,8 @@ trait HasJsonSchema
     public function getJsonSchemaAttributes()
     {
         return array_reduce(array_keys($this->casts), function($attributes, $key) {
-            if ($this->getCastType($key) === 'json_schema') {
+            list($type, $jsonSchema) = explode(':', $this->getCastType($key));
+            if ($jsonSchema === 'json_schema') {
                 $attributes[] = $key;
             }
             return $attributes;
@@ -251,6 +256,19 @@ trait HasJsonSchema
     public function setJsonSchemas($schemas)
     {
         $this->jsonSchemas = $schemas;
+        return $this;
+    }
+
+    /**
+     * Set the JSON schema of an attribute.
+     *
+     * @param  string  $key
+     * @param  string  $schema
+     * @return $this
+     */
+    public function setJsonSchema($key, $schema)
+    {
+        $this->jsonSchemas[$key] = $schema;
         return $this;
     }
 
