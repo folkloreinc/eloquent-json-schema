@@ -37,12 +37,14 @@
         "php-mock/php-mock-phpunit": "^1.1|^2.0"
     },
     "autoload": {
-        "classmap": [
-            "tests/"
-        ],
         "psr-0": {
             "Folklore\\EloquentJsonSchema": "src/"
         }
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/"
+        ]
     },
     "minimum-stability": "stable",
     "extra": {
