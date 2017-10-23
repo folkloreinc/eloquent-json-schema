@@ -11,9 +11,7 @@ use Folklore\EloquentJsonSchema\Contracts\ReducerSaver;
 
 trait HasJsonSchema
 {
-    protected $jsonSchemas = [];
-
-    protected $jsonSchemasReducers = [];
+    protected static $defaultJsonSchemas = [];
 
     public static function bootHasJsonSchema()
     {
@@ -23,6 +21,21 @@ trait HasJsonSchema
     public static function getGlobalJsonSchemaReducers()
     {
         return config('json-schema.reducers', []);
+    }
+
+    public static function getDefaultJsonSchemas()
+    {
+        return static::$defaultJsonSchemas;
+    }
+
+    public static function setDefaultJsonSchemas($schemas)
+    {
+        static::$defaultJsonSchemas = $schemas;
+    }
+
+    public static function setDefaultJsonSchema($key, $schema)
+    {
+        static::$defaultJsonSchemas[$key] = $schema;
     }
 
     /**
@@ -182,7 +195,8 @@ trait HasJsonSchema
      */
     public function getAttributeJsonSchema($key)
     {
-        $schemas = $this->getJsonSchemas();
+        $schemas = $this->hasJsonSchema($key) ?
+            $this->getJsonSchemas() : static::getDefaultJsonSchemas();
         if (!array_key_exists($key, $schemas)) {
             return null;
         }
@@ -244,7 +258,7 @@ trait HasJsonSchema
      */
     public function getJsonSchemas()
     {
-        return $this->jsonSchemas;
+        return isset($this->jsonSchemas) ? $this->jsonSchemas : [];
     }
 
     /**
@@ -268,6 +282,10 @@ trait HasJsonSchema
      */
     public function setJsonSchema($key, $schema)
     {
+        if (!isset($this->jsonSchemas)) {
+            $this->jsonSchemas = [];
+        }
+
         $this->jsonSchemas[$key] = $schema;
         return $this;
     }
@@ -279,7 +297,7 @@ trait HasJsonSchema
      */
     public function getJsonSchemaReducers()
     {
-        return $this->jsonSchemasReducers;
+        return isset($this->jsonSchemasReducers) ? $this->jsonSchemasReducers : [];
     }
 
     /**
@@ -294,6 +312,9 @@ trait HasJsonSchema
         if (is_null($reducers)) {
             $this->jsonSchemasReducers = $reducers;
         } else {
+            if (!isset($this->jsonSchemasReducers)) {
+                $this->jsonSchemasReducers = [];
+            }
             $this->jsonSchemasReducers[$key] = $reducers;
         }
         return $this;
@@ -308,6 +329,10 @@ trait HasJsonSchema
      */
     public function addJsonSchemaReducer($key, $reducer = null)
     {
+        if (!isset($this->jsonSchemasReducers)) {
+            $this->jsonSchemasReducers = [];
+        }
+
         if (is_null($reducer)) {
             $this->jsonSchemasReducers[] = $reducer;
         } else {
