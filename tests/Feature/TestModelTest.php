@@ -81,7 +81,7 @@ class TestModelTest extends TestCase
 
         $this->assertEquals($child->id, $model->data['children'][0]->id);
         $this->assertEquals($child->id, $model->children[0]->id);
-        $this->assertEquals('children.0', $model->children[0]->test_handle);
+        $this->assertEquals('data.children.0', $model->children[0]->test_handle);
         $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
 
         // Remove children

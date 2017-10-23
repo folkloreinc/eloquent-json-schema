@@ -7,7 +7,7 @@ class TestChildModel extends Model
     protected $table = 'children';
 
     protected $casts = [
-        'data' => 'array:json_schema',
+        'data' => 'json_schema',
     ];
 
     protected $jsonSchemas = [

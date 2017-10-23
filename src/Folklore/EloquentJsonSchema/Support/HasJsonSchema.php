@@ -13,6 +13,10 @@ trait HasJsonSchema
 {
     protected static $defaultJsonSchemas = [];
 
+    protected $enabledJsonSchemasAttributes = [];
+
+    protected $disabledJsonSchemasAttributes = [];
+
     public static function bootHasJsonSchema()
     {
         static::observe(JsonSchemaObserver::class);
@@ -65,21 +69,20 @@ trait HasJsonSchema
     {
         $attributes = $this->getJsonSchemaAttributes();
         foreach ($attributes as $key) {
-            $schema = $this->getAttributeJsonSchema($key);
             $value = $this->getAttributeValue($key);
-            $this->callJsonSchemaReducers($schema, 'save', $value);
+            $this->callJsonSchemaReducers($key, 'save', $value);
         }
     }
 
     /**
      * Call the reducers for a given method
      *
-     * @param  \Folklore\EloquentJsonSchema\Contracts\JsonSchema $schema
+     * @param  string $key
      * @param  string $method
      * @param  mixed $value
      * @return mixed
      */
-    protected function callJsonSchemaReducers($schema, $method, $value)
+    protected function callJsonSchemaReducers($key, $method, $value)
     {
         $interfaces = [
             'get' => ReducerGetter::class,
@@ -91,6 +94,11 @@ trait HasJsonSchema
         }
         $interface = $interfaces[$method];
 
+        $schema = $this->getAttributeJsonSchema($key);
+        if (is_null($schema)) {
+            return $value;
+        }
+
         // Get reducers
         $reducers = array_merge(
             static::getGlobalJsonSchemaReducers(),
@@ -100,8 +108,10 @@ trait HasJsonSchema
             $schema->getReducers()
         );
 
-        $nodesCollection = $schema->getNodesFromData($value);
-        return $nodesCollection->reduce(function ($value, $node) use ($reducers, $interface, $method) {
+        $nodesCollection = $schema->getNodesFromData($value)->prependPath($key);
+        $data = [];
+        $data[$key] = is_object($value) ? clone $value : $value;
+        $data = $nodesCollection->reduce(function ($value, $node) use ($reducers, $interface, $method) {
             foreach ($reducers as $reducer) {
                 $reducer = is_string($reducer) ? app($reducer) : $reducer;
                 if ($reducer instanceof $interface) {
@@ -111,7 +121,8 @@ trait HasJsonSchema
                 }
             }
             return $value;
-        }, $value);
+        }, $data);
+        return $data[$key];
     }
 
     /**
@@ -123,8 +134,7 @@ trait HasJsonSchema
      */
     protected function castAttributeAsJsonSchema($key, $value)
     {
-        $schema = $this->getAttributeJsonSchema($key);
-        $value = $this->callJsonSchemaReducers($schema, 'set', $value);
+        $value = $this->callJsonSchemaReducers($key, 'set', $value);
 
         if (method_exists($this, 'castAttributeAsJson')) {
             $value = $this->castAttributeAsJson($key, $value);
@@ -136,20 +146,6 @@ trait HasJsonSchema
     }
 
     /**
-     * Decode the given JSON Schema back into an array or object.
-     *
-     * @param  \Folklore\EloquentJsonSchema\Contracts\JsonSchema  $schema
-     * @param  string  $value
-     * @param  boolean  $asObject
-     * @return mixed
-     */
-    public function fromJsonSchema($schema, $value, $asObject = false)
-    {
-        $value = $this->fromJson($value, $asObject);
-        return $this->callJsonSchemaReducers($schema, 'get', $value);
-    }
-
-    /**
      * Cast an attribute to a native PHP type.
      *
      * @param  string  $key
@@ -158,15 +154,18 @@ trait HasJsonSchema
      */
     protected function castAttribute($key, $value)
     {
-        $value = parent::castAttribute($key, $value);
-        switch ($this->getCastType($key)) {
-            case 'array:json_schema':
-            case 'object:json_schema':
-                list($type) = explode(':', $this->getCastType($key));
-                $asObject = $type === 'object';
-                $schema = $this->getAttributeJsonSchema($key);
-                return !is_null($schema) ?
-                    $this->fromJsonSchema($schema, $value, $asObject) : $this->fromJson($value, $asObject);
+        $type = $this->getCastType($key);
+        switch ($type) {
+            case 'json_schema':
+            case 'json_schema:array':
+            case 'json_schema:object':
+                $type = explode(':', $type);
+                $asObject = sizeof($type) === 2 && $type[1] === 'object';
+                $value = $this->fromJson($value, $asObject);
+                if ($this->isJsonSchemaAttributeDisabled($key)) {
+                    return $value;
+                }
+                return $this->callJsonSchemaReducers($key, 'get', $value);
             default:
                 return $value;
         }
@@ -232,8 +231,7 @@ trait HasJsonSchema
     public function getJsonSchemaAttributes()
     {
         return array_reduce(array_keys($this->casts), function($attributes, $key) {
-            list($type, $jsonSchema) = explode(':', $this->getCastType($key));
-            if ($jsonSchema === 'json_schema') {
+            if (explode(':', $this->getCastType($key))[0] === 'json_schema') {
                 $attributes[] = $key;
             }
             return $attributes;
@@ -342,5 +340,65 @@ trait HasJsonSchema
             $this->jsonSchemasReducers[$key][] = $reducer;
         }
         return $this;
+    }
+
+
+    public function getDisabledJsonSchemasAttributes()
+    {
+        return $this->disabledJsonSchemasAttributes;
+    }
+
+    public function setDisabledJsonSchemasAttributes(array $disabled)
+    {
+        $this->disabledJsonSchemasAttributes = $disabled;
+        return $this;
+    }
+    public function addDisabledJsonSchemaAttribute($field = null)
+    {
+        $this->disabledJsonSchemasAttributes = array_merge(
+            $this->disabledJsonSchemasAttributes,
+            is_array($field) ? $field : func_get_args()
+        );
+    }
+    public function getEnabledJsonSchemasAttributes()
+    {
+        return $this->enabledJsonSchemasAttributes;
+    }
+    public function setEnabledJsonSchemasAttributes(array $enabled)
+    {
+        $this->enabledJsonSchemasAttributes = $enabled;
+        return $this;
+    }
+    public function addEnabledJsonSchemaAttribute($field = null)
+    {
+        $this->enabledJsonSchemasAttributes = array_merge(
+            $this->enabledJsonSchemasAttributes,
+            is_array($field) ? $field : func_get_args()
+        );
+    }
+    public function makeJsonSchemaAttributeEnabled($field)
+    {
+        $this->disabledJsonSchemasAttributes = array_diff($this->disabledJsonSchemasAttributes, (array) $field);
+        if (! empty($this->enabledJsonSchemasAttributes)) {
+            $this->addEnabledJsonSchemasAttribute($field);
+        }
+        return $this;
+    }
+    public function makeJsonSchemaAttributeDisabled($field)
+    {
+        $field = (array) $field;
+        $this->enabledJsonSchemasAttributes = array_diff($this->enabledJsonSchemasAttributes, $field);
+        $this->disabledJsonSchemasAttributes = array_unique(array_merge($this->disabledJsonSchemasAttributes, $field));
+        return $this;
+    }
+    public function disableAllJsonSchemasAttributes()
+    {
+        $attributes = $schema->getJsonSchemaAttributes();
+        $this->makeJsonSchemaAttributeDisabled($attributes);
+    }
+    public function isJsonSchemaAttributeDisabled($field)
+    {
+        $disabled = $this->getDisabledJsonSchemasAttributes();
+        return in_array($field, $disabled);
     }
 }

@@ -35,7 +35,8 @@ abstract class RelationReducer extends Reducer
         // Fallback to query if not found in relations and model doesn't exists
         if ($this->shouldQueryRelation($model, $node, $state, $value)) {
             $relationClass = $this->getRelationClass($model, $node, $state);
-            $value = app($relationClass)->find($id)->first();
+            $resolvedRelationClass = get_class(app($relationClass));
+            $value = $resolvedRelationClass::find($id);
         }
 
         $state = Utils::setPath($state, $node->path, $value);
@@ -64,7 +65,7 @@ abstract class RelationReducer extends Reducer
     // @TODO add checks everywhere required
     public function save(HasJsonSchemaContract $model, Node $node, $state)
     {
-        if (is_null($state)) {
+        if (!$this->shouldUseReducer($model, $node, $state)) {
             return $state;
         }
 
@@ -96,7 +97,7 @@ abstract class RelationReducer extends Reducer
     {
         $relationName = $this->getRelationName($model, $node, $state);
         $relationClass = $model->{$relationName}();
-        return is_null($value) && ($relationClass instanceof HasOneOrMany || !$model->exists);
+        return is_null($value) && ($relationClass instanceof HasOneOrMany || !$model->exists || sizeof($model->getDirty()));
     }
 
     protected function shouldUseReducer($model, $node, $state)
@@ -264,7 +265,7 @@ abstract class RelationReducer extends Reducer
         $currentItem = $this->getRelationCurrentItemAtPath($model, $relation, $path);
         if ($currentItem) {
             $pathColumn = $this->getRelationPathColumn($relation);
-            return $this->detachRelationFromModel($model, $relation, $item, [
+            return $this->detachRelationFromModel($model, $relation, $currentItem, [
                 $pathColumn => null,
             ]);
         }
