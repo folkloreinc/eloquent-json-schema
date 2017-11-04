@@ -32,8 +32,6 @@ class JsonSchemaServiceProvider extends BaseServiceProvider
     {
         // Config file path
         $configPath = __DIR__ . '/../../config/config.php';
-        $viewsPath = __DIR__ . '/../../resources/views/';
-        $langPath = __DIR__ . '/../../resources/lang/';
 
         // Merge files
         $this->mergeConfigFrom($configPath, 'json-schema');
@@ -42,14 +40,6 @@ class JsonSchemaServiceProvider extends BaseServiceProvider
         $this->publishes([
             $configPath => config_path('json-schema.php')
         ], 'config');
-
-        $this->publishes([
-            $viewsPath => base_path('resources/views/vendor/folklore/eloquent-json-schema')
-        ], 'views');
-
-        $this->publishes([
-            $langPath => base_path('resources/lang/vendor/folklore/eloquent-json-schema')
-        ], 'lang');
     }
 
     public function bootValidator()
