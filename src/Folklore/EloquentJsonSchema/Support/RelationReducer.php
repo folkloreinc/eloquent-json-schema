@@ -25,10 +25,6 @@ abstract class RelationReducer extends Reducer
         }
 
         $id = Utils::getPath($state, $node->path);
-        if (is_null($id)) {
-            return $state;
-        }
-
         $relationName = $this->getRelationName($model, $node, $state);
         $value = $this->mutateRelationIdToObject($model, $relationName, $id);
 
@@ -39,7 +35,10 @@ abstract class RelationReducer extends Reducer
             $value = $resolvedRelationClass::find($id);
         }
 
-        $state = Utils::setPath($state, $node->path, $value);
+        if ($value !== $id) {
+            return Utils::setPath($state, $node->path, $value);
+        }
+
         return $state;
     }
 
@@ -51,14 +50,13 @@ abstract class RelationReducer extends Reducer
         }
 
         $originalValue = Utils::getPath($state, $node->path);
-        if (is_null($originalValue) || (!is_object($originalValue) && !is_array($originalValue))) {
-            return $state;
-        }
-
         $relationName = $this->getRelationName($model, $node, $state);
         $value = $this->mutateRelationObjectToId($model, $relationName, $originalValue);
 
-        $state = Utils::setPath($state, $node->path, $value);
+        if ($value !== $originalValue) {
+            return Utils::setPath($state, $node->path, $value);
+        }
+
         return $state;
     }
 
@@ -166,6 +164,7 @@ abstract class RelationReducer extends Reducer
         if (is_null($object)) {
             return null;
         }
+
         if (!is_object($object) && !is_array($object)) {
             return $object;
         }
