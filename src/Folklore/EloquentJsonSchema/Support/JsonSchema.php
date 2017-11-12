@@ -322,7 +322,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
 
         // @TODO Add condition to check for array
         $schema = [
-            'type' => $nullable ? ['null', $type] : $type,
+            'type' => $nullable ? array_merge(['null'], (array)$type) : $type,
         ];
         if ($name !== $type) {
             $schema['name'] = $name;
