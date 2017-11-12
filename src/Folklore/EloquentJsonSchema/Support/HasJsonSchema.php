@@ -141,6 +141,10 @@ trait HasJsonSchema
     {
         $value = $this->callJsonSchemaReducers($key, 'set', $value);
 
+        if (is_null($value)) {
+            return $value;
+        }
+
         if (method_exists($this, 'castAttributeAsJson')) {
             $value = $this->castAttributeAsJson($key, $value);
         } else {
