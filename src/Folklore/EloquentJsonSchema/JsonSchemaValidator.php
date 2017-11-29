@@ -17,7 +17,12 @@ class JsonSchemaValidator
 
     public function validateSchema($value, $schema)
     {
-        $valueObject = (object)($value instanceof Arrayable ? $value->toArray() : $value);
+        $valueObject = $value;
+        if ($value instanceof Arrayable) {
+            $valueObject = $value->toArray();
+        } else if ($this->arrayIsAssociative($value)) {
+            $valueObject = (object)$value;
+        }
         $schemaObject = $schema instanceof Arrayable ? $schema->toArray() : $schema;
         $this->validator->validate($valueObject, $schemaObject, Constraint::CHECK_MODE_APPLY_DEFAULTS);
         return $this->validator->isValid();
@@ -44,6 +49,15 @@ class JsonSchemaValidator
             $messages[$name][] = $error['message'];
         }
         return $messages;
+    }
+
+    protected function arrayIsAssociative($arr) {
+        if (array() === $arr) {
+            return false;
+        }
+        return array_reduce(array_keys($arr), function($isAssociative, $key) {
+            return $isAssociative || !is_numeric($key);
+        }, false);
     }
 
     public function __call($method, $parameters)
