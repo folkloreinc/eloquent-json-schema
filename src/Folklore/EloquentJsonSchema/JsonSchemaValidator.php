@@ -20,7 +20,7 @@ class JsonSchemaValidator
         $valueObject = $value;
         if ($value instanceof Arrayable) {
             $valueObject = $value->toArray();
-        } else if ($this->arrayIsAssociative($value)) {
+        } else if (is_array($value) && $this->arrayIsAssociative($value)) {
             $valueObject = (object)$value;
         }
         $schemaObject = $schema instanceof Arrayable ? $schema->toArray() : $schema;
