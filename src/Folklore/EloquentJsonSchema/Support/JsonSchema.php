@@ -256,6 +256,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
                 $properties = $items;
             }
         }
+        // @TODO Handle other types
 
         $nodes = new NodesCollection();
         foreach ($properties as $name => $propertySchema) {
@@ -283,7 +284,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     {
         $nodes = $this->getNodes($root);
         $dataArray = !is_null($data) ? json_decode(json_encode($data), true) : [];
-        $dataPaths = array_keys(array_dot($dataArray));
+        $dataPaths = is_array($dataArray) ? array_keys(array_dot($dataArray)) : [];
         return $nodes->reduce(function ($collection, $node) use ($dataPaths, $data) {
             $paths = $this->getMatchingPaths($dataPaths, $node->path);
             foreach ($paths as $path) {
