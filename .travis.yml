@@ -1,46 +1,64 @@
 language: php
 
 cache:
-    directories:
-        - "$COMPOSER_CACHE_DIR"
-        - "$HOME/.composer/cache"
-        - vendor
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.composer/cache/files
+
 php:
     - 5.5
     - 5.6
     - 7.0
     - 7.1
+
 env:
-    - TESTBENCH_VERSION=3.1.* DATABASE_VERSION=3.1.* ILLUMINATE_VERSION=5.1.* PHPUNIT_VERSION=~4.0
-    - TESTBENCH_VERSION=3.2.* DATABASE_VERSION=3.2.* ILLUMINATE_VERSION=5.2.* PHPUNIT_VERSION=~4.1
-    - TESTBENCH_VERSION=3.3.* DATABASE_VERSION=3.3.* ILLUMINATE_VERSION=5.3.* PHPUNIT_VERSION=~5.4
-    - TESTBENCH_VERSION=3.4.* DATABASE_VERSION=3.4.* ILLUMINATE_VERSION=5.4.* PHPUNIT_VERSION=~5.7
-    - TESTBENCH_VERSION=3.5.* DATABASE_VERSION=3.5.* ILLUMINATE_VERSION=5.5.* PHPUNIT_VERSION=~6.0
+    - ILLUMINATE_VERSION=5.1.*
+    - ILLUMINATE_VERSION=5.2.*
+    - ILLUMINATE_VERSION=5.3.*
+    - ILLUMINATE_VERSION=5.4.*
+    - ILLUMINATE_VERSION=5.5.*
+    - ILLUMINATE_VERSION=5.5.* COVERAGE=true
 
 matrix:
+    # For each PHP version we exclude the coverage env, except for PHP 7.1
     exclude:
+        # Test only Laravel 5.1 and 5.2 on PHP 5.5
         - php: 5.5
-          env: TESTBENCH_VERSION=3.3.* DATABASE_VERSION=3.3.* ILLUMINATE_VERSION=5.3.* PHPUNIT_VERSION=~5.4
+          env: ILLUMINATE_VERSION=5.3.*
         - php: 5.5
-          env: TESTBENCH_VERSION=3.4.* DATABASE_VERSION=3.4.* ILLUMINATE_VERSION=5.4.* PHPUNIT_VERSION=~5.7
+          env: ILLUMINATE_VERSION=5.4.*
         - php: 5.5
-          env: TESTBENCH_VERSION=3.5.* DATABASE_VERSION=3.5.* ILLUMINATE_VERSION=5.5.* PHPUNIT_VERSION=~6.0
+          env: ILLUMINATE_VERSION=5.5.*
+        - php: 5.5
+          env: ILLUMINATE_VERSION=5.5.* COVERAGE=true
+        # Don't test Laravel 5.5 on PHP 5.6
         - php: 5.6
-          env: TESTBENCH_VERSION=3.5.* DATABASE_VERSION=3.5.* ILLUMINATE_VERSION=5.5.* PHPUNIT_VERSION=~6.0
+          env: ILLUMINATE_VERSION=5.5.*
+        - php: 5.6
+          env: ILLUMINATE_VERSION=5.5.* COVERAGE=true
+        # Test everything on PHP 7.0
+        - php: 7.0
+          env: ILLUMINATE_VERSION=5.5.* COVERAGE=true
+        # Test only Laravel 5.4 and 5.5 on PHP 7.1
+        - php: 7.1
+          env: ILLUMINATE_VERSION=5.1.*
+        - php: 7.1
+          env: ILLUMINATE_VERSION=5.2.*
+        - php: 7.1
+          env: ILLUMINATE_VERSION=5.3.*
+        - php: 7.1
+          env: ILLUMINATE_VERSION=5.5.*
 
 before_install:
+    - phpenv config-rm xdebug.ini
     - composer global require hirak/prestissimo --update-no-dev
     - composer require "illuminate/support:${ILLUMINATE_VERSION}" --no-update --prefer-dist
-    - composer require "orchestra/database:${DATABASE_VERSION}" --no-update --prefer-dist
-    - composer require "orchestra/testbench:${TESTBENCH_VERSION}" --no-update --prefer-dist
-    - composer require "phpunit/phpunit:${PHPUNIT_VERSION}" --no-update --prefer-dist
 
 install: composer update --no-interaction --prefer-dist
 
 script: vendor/bin/phpunit
 
-after_success:
-    - travis_retry php vendor/bin/coveralls
+after_success: sh -c "if [-n ${COVERAGE}]; then travis_retry php vendor/bin/coveralls; fi"
 
 notifications:
     email: false
