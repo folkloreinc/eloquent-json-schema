@@ -17,6 +17,8 @@ trait HasJsonSchema
 
     protected $disabledJsonSchemasAttributes = [];
 
+    protected $savingJsonSchemas = false;
+
     public static function bootHasJsonSchema()
     {
         static::observe(JsonSchemaObserver::class);
@@ -67,11 +69,13 @@ trait HasJsonSchema
      */
     public function saveJsonSchemaAttributes()
     {
+        $this->setSavingJsonSchemas(true);
         $attributes = $this->getJsonSchemaAttributes();
         foreach ($attributes as $key) {
             $value = $this->getAttributeValue($key);
             $this->callJsonSchemaReducers($key, 'save', $value);
         }
+        $this->setSavingJsonSchemas(false);
     }
 
     /**
@@ -482,5 +486,26 @@ trait HasJsonSchema
     {
         $disabled = $this->getDisabledJsonSchemasAttributes();
         return in_array($attribute, $disabled);
+    }
+
+    /**
+     * Set if it's saving json schemas
+     *
+     * @param  boolean  $saving
+     * @return void
+     */
+    protected function setSavingJsonSchemas($saving)
+    {
+        $this->savingJsonSchemas = $saving;
+    }
+
+    /**
+     * Check if it's saving json schemas
+     *
+     * @return boolean
+     */
+    public function isSavingJsonSchemas()
+    {
+        return $this->savingJsonSchemas;
     }
 }

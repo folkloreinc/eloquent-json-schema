@@ -95,7 +95,12 @@ abstract class RelationReducer extends Reducer
     {
         $relationName = $this->getRelationName($model, $node, $state);
         $relationClass = $model->{$relationName}();
-        return is_null($value) && ($relationClass instanceof HasOneOrMany || !$model->exists || sizeof($model->getDirty()));
+        return is_null($value) && (
+            $model->isSavingJsonSchemas() ||
+            $relationClass instanceof HasOneOrMany ||
+            !$model->exists ||
+            sizeof($model->getDirty())
+        );
     }
 
     protected function shouldUseReducer($model, $node, $state)
