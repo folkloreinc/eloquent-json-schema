@@ -39,6 +39,12 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
         $this->attributes = array_except($schema, $this->schemaAttributes);
     }
 
+    public function setName($name)
+    {
+        $this->name = $name;
+        return $this;
+    }
+
     public function getName()
     {
         $class = get_class($this);
