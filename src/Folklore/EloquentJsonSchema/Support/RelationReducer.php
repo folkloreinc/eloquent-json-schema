@@ -139,9 +139,11 @@ abstract class RelationReducer extends Reducer
         }
 
         if (!$model->relationLoaded($relationName)) {
-            app(Log::class)->warning(
-                'Relation "'.$relationName.'" is needed for reducer '.get_class($this).' but not explicitly loaded'
-            );
+            if (config('json-schema.debug', false)) {
+                app(Log::class)->warning(
+                    'Relation "'.$relationName.'" is needed for reducer '.get_class($this).' but not explicitly loaded'
+                );
+            }
             return null;
         }
 
