@@ -67,6 +67,9 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
         }
 
         foreach ($properties as $key => $value) {
+            if (is_null($value)) {
+                dd($key, $value);
+            }
             $propertyAppends = $value->getAppends();
             if (sizeof($propertyAppends)) {
                 foreach ($propertyAppends as $propertyKey => $propertyValue) {
@@ -137,7 +140,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
 
         if (is_string($items)) {
             return app($items);
-        } elseif (is_array($items) && isset($items['type'])) {
+        } elseif ($items instanceof JsonSchemaContract || (is_array($items) && isset($items['type']))) {
             return $items;
         }
 
