@@ -252,6 +252,24 @@ trait HasJsonSchema
     }
 
     /**
+     * Convert the model's attributes to an array.
+     *
+     * @return array
+     */
+    public function attributesToArray()
+    {
+        $attributes = parent::attributesToArray();
+        $schemaAttributes = $this->getJsonSchemaAttributes();
+        foreach ($schemaAttributes as $attribute) {
+            $value = array_get($attributes, $attribute, null);
+            if (is_object($value)) {
+                $attributes[$attribute] = json_decode(json_encode($attributes[$attribute]), true);
+            }
+        }
+        return $attributes;
+    }
+
+    /**
      * Determine whether an attribute has a JSON Schema
      *
      * @param  string  $key
