@@ -99,7 +99,7 @@ abstract class RelationReducer extends Reducer
             $model->isSavingJsonSchemas() ||
             $relationClass instanceof HasOneOrMany ||
             !$model->exists ||
-            sizeof($model->getDirty())
+            sizeof($model->getDirtyJsonSchemas())
         );
     }
 

@@ -508,4 +508,23 @@ trait HasJsonSchema
     {
         return $this->savingJsonSchemas;
     }
+
+    /**
+     * Get dirty json schemas attributes
+     *
+     * @return boolean
+     */
+    public function getDirtyJsonSchemas()
+    {
+        $dirty = [];
+
+        foreach ($this->getJsonSchemaAttributes() as $key) {
+            $value = array_get($this->attributes, $key);
+            if ($value !== $this->getOriginal($key)) {
+                $dirty[$key] = $value;
+            }
+        }
+
+        return $dirty;
+    }
 }
