@@ -339,7 +339,17 @@ abstract class RelationReducer extends Reducer
             }
             $item->save();
         } else {
-            $model->{$relation}()->detach($item);
+            // @NOTE: Double check if there is a better method without messing with internal laravel methods.
+            $relatedPivotKey = $relationClass->getRelatedPivotKeyName();
+            $itemKey = last(explode('.', $relationClass->getQualifiedParentKeyName()));
+            $query = $model->{$relation}()->newPivotStatement()
+                ->where($column, $item->pivot->{$column})
+                ->where($relatedPivotKey, $item->{$itemKey})
+                ->where($relationClass->getForeignPivotKeyName(), $model->getKey());
+            if (method_exists($relationClass, 'getMorphType')) {
+                $query->where($relationClass->getMorphType(), $relationClass->getMorphClass());
+            }
+            $query->delete();
         }
     }
 
