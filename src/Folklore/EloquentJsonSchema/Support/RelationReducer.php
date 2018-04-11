@@ -4,6 +4,7 @@ namespace Folklore\EloquentJsonSchema\Support;
 
 use Illuminate\Contracts\Logging\Log;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Folklore\EloquentJsonSchema\Contracts\HasJsonSchema as HasJsonSchemaContract;
 use Folklore\EloquentJsonSchema\Node;
 
@@ -338,14 +339,15 @@ abstract class RelationReducer extends Reducer
                 $item->setAttribute($column, $value);
             }
             $item->save();
-        } else {
+        } else if ($relationClass instanceof BelongsToMany) {
             // @NOTE: Double check if there is a better method without messing with internal laravel methods.
-            $relatedPivotKey = $relationClass->getRelatedPivotKeyName();
+            $relatedPivotKey = last(explode('.', $relationClass->getQualifiedRelatedKeyName()));
             $itemKey = last(explode('.', $relationClass->getQualifiedParentKeyName()));
+            $foreignKey = last(explode('.', $relationClass->getQualifiedForeignKeyName()));
             $query = $model->{$relation}()->newPivotStatement()
                 ->where($column, $item->pivot->{$column})
                 ->where($relatedPivotKey, $item->{$itemKey})
-                ->where($relationClass->getForeignPivotKeyName(), $model->getKey());
+                ->where($foreignKey, $model->getKey());
             if (method_exists($relationClass, 'getMorphType')) {
                 $query->where($relationClass->getMorphType(), $relationClass->getMorphClass());
             }
