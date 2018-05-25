@@ -332,8 +332,9 @@ abstract class RelationReducer extends Reducer
         $column = $this->getRelationPathColumn($relation);
         $relationClass = $model->{$relation}();
         if ($relationClass instanceof HasOneOrMany) {
-            $method = method_exists($relationClass, 'getForeignKeyName') ?
-                'getForeignKeyName' : 'getPlainForeignKey';
+            $method = method_exists($relationClass, 'getForeignKeyName')
+                ? 'getForeignKeyName'
+                : 'getPlainForeignKey';
             $item->setAttribute($relationClass->$method(), null);
             foreach ($pivot as $column => $value) {
                 $item->setAttribute($column, $value);
@@ -341,9 +342,15 @@ abstract class RelationReducer extends Reducer
             $item->save();
         } else if ($relationClass instanceof BelongsToMany) {
             // @NOTE: Double check if there is a better method without messing with internal laravel methods.
-            $relatedPivotKey = last(explode('.', $relationClass->getQualifiedRelatedKeyName()));
+            $relatedMethod = method_exists($relationClass, 'getQualifiedRelatedKeyName')
+                ? 'getQualifiedRelatedKeyName'
+                : 'getQualifiedRelatedPivotKeyName';
+            $foreignMethod = method_exists($relationClass, 'getQualifiedForeignKeyName')
+                ? 'getQualifiedForeignKeyName'
+                : 'getQualifiedForeignPivotKeyName';
+            $relatedPivotKey = last(explode('.', $relationClass->$relatedMethod()));
             $itemKey = last(explode('.', $relationClass->getQualifiedParentKeyName()));
-            $foreignKey = last(explode('.', $relationClass->getQualifiedForeignKeyName()));
+            $foreignKey = last(explode('.', $relationClass->$foreignMethod()));
             $query = $model->{$relation}()->newPivotStatement()
                 ->where($column, $item->pivot->{$column})
                 ->where($relatedPivotKey, $item->{$itemKey})
