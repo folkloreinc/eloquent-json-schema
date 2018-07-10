@@ -341,23 +341,11 @@ abstract class RelationReducer extends Reducer
             }
             $item->save();
         } else if ($relationClass instanceof BelongsToMany) {
-            // @NOTE: Double check if there is a better method without messing with internal laravel methods.
-            $relatedMethod = method_exists($relationClass, 'getQualifiedRelatedKeyName')
-                ? 'getQualifiedRelatedKeyName'
-                : 'getQualifiedRelatedPivotKeyName';
-            $foreignMethod = method_exists($relationClass, 'getQualifiedForeignKeyName')
-                ? 'getQualifiedForeignKeyName'
-                : 'getQualifiedForeignPivotKeyName';
-            $relatedPivotKey = last(explode('.', $relationClass->$relatedMethod()));
-            $itemKey = last(explode('.', $relationClass->getQualifiedParentKeyName()));
-            $foreignKey = last(explode('.', $relationClass->$foreignMethod()));
-            $query = $model->{$relation}()->newPivotStatement()
-                ->where($column, $item->pivot->{$column})
-                ->where($relatedPivotKey, $item->{$itemKey})
-                ->where($foreignKey, $model->getKey());
-            if (method_exists($relationClass, 'getMorphType')) {
-                $query->where($relationClass->getMorphType(), $relationClass->getMorphClass());
-            }
+            $itemKey = method_exists($relationClass, 'getQualifiedParentKeyName')
+                ? last(explode('.', $relationClass->getQualifiedParentKeyName()))
+                : $item->getKeyName();
+            $query = $model->{$relation}()->newPivotStatementForId($item->{$itemKey})
+                ->where($column, $item->pivot->{$column});
             $query->delete();
         }
     }

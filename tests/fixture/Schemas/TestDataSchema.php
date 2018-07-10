@@ -17,6 +17,7 @@ class TestDataSchema extends JsonSchema
                 'type' => 'string',
             ],
             'children' => TestChildrenSchema::class,
+            'childrenWithPivot' => TestChildrenWithPivotSchema::class,
             'child' => TestChildSchema::class,
         ];
     }
@@ -26,6 +27,7 @@ class TestDataSchema extends JsonSchema
         return [
             TestSlugReducer::class,
             TestChildrenReducer::class,
+            TestChildrenWithPivotReducer::class,
         ];
     }
 }

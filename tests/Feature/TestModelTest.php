@@ -51,7 +51,7 @@ class TestModelTest extends TestCase
     }
 
     /**
-     * Test the constructor
+     * Test relation
      *
      * @test
      */
@@ -99,6 +99,58 @@ class TestModelTest extends TestCase
         $model->load('children');
         $this->assertEquals(0, sizeof($model->data['children']));
         $this->assertEquals(0, sizeof($model->children));
+        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+    }
+
+    /**
+     * Test relation with pivot
+     *
+     * @test
+     */
+    public function testModelChildrenWithPivot()
+    {
+        $childData = [
+            'name' => 'Child',
+        ];
+        $child = new TestChildModel();
+        $child->data = $childData;
+        $child->save();
+
+        // Add children
+        $data = [
+            'type' => 'test',
+            'name' => 'Test',
+            'childrenWithPivot' => [$child]
+        ];
+        $rawData = array_merge([], $data, [
+            'childrenWithPivot' => [(string)$child->id],
+            'slug' => str_slug($data['name']),
+        ]);
+        $model = new TestModel();
+        $model->data = $data;
+        $model->save();
+        $model->load('childrenWithPivot');
+
+        $this->assertEquals($child->id, $model->data['childrenWithPivot'][0]->id);
+        $this->assertEquals($child->id, $model->childrenWithPivot[0]->id);
+        $this->assertEquals('data.childrenWithPivot.0', $model->childrenWithPivot[0]->pivot->handle);
+        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+
+        // Remove children
+        $data = [
+            'type' => 'test',
+            'name' => 'Test',
+            'childrenWithPivot' => []
+        ];
+        $rawData = array_merge([], $data, [
+            'slug' => str_slug($data['name']),
+        ]);
+        $model = new TestModel();
+        $model->data = $data;
+        $model->save();
+        $model->load('childrenWithPivot');
+        $this->assertEquals(0, sizeof($model->data['childrenWithPivot']));
+        $this->assertEquals(0, sizeof($model->childrenWithPivot));
         $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
     }
 }
