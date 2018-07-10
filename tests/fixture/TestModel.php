@@ -20,6 +20,7 @@ class TestModel extends Model
 
     public function childrenWithPivot() {
         return $this->belongsToMany(TestChildModel::class, 'tests_children_pivot', 'test_id', 'child_id')
-            ->withPivot('handle');
+            ->withPivot('handle')
+            ->withTimestamps();
     }
 }
