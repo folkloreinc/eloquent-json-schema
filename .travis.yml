@@ -73,9 +73,7 @@ before_script: phpenv config-add ~/xdebug.ini
 
 script: vendor/bin/phpunit
 
-after_success: sh -c "if [ ! -z ${COVERAGE+x} ]; then php vendor/bin/coveralls; fi"
+after_success: sh -c "if [ ! -z ${COVERAGE+x} ]; then travis_retry php vendor/bin/php-coveralls; fi"
 
 notifications:
     email: false
-    slack:
-        secure: ZilkSllOIo1vCtgUJrQ2ZQaCxW4/zpXZSFYL5Scl5o66fkgmymHR+cUqHsz9jHkXEkxOxORG1baRaJDKnyJ2A3XTfscmhOvAOupQ9jzc9M8yzugH7SrxcjDUJ02CX6LcXlOtOvPwPdkHVi9hR/qmx9D4QZEznVmvxZ2HJOVNJ18=
