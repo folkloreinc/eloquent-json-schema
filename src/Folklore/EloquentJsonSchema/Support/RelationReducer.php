@@ -64,7 +64,7 @@ abstract class RelationReducer extends Reducer
     // @TODO add checks everywhere required
     public function save(HasJsonSchemaContract $model, Node $node, $state)
     {
-        if (!$this->shouldUseReducer($model, $node, $state)) {
+        if (!$this->shouldUseSaveReducer($model, $node, $state)) {
             return $state;
         }
 
@@ -118,6 +118,30 @@ abstract class RelationReducer extends Reducer
 
         // Only treat single item nodes, not arrays
         if ($node->schema->getType() !== 'object') {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function shouldUseSaveReducer($model, $node, $state)
+    {
+        if (is_null($state)) {
+            return false;
+        }
+
+        // Only treat relations matching the associated schema class
+        $relationSchemaClass = $this->getRelationSchemaClass($model, $node, $state);
+        $relationSchemaManyClass = $this->getRelationSchemaManyClass($model, $node, $state);
+        if ((is_null($relationSchemaClass) || !($node->schema instanceof $relationSchemaClass))
+            && (is_null($relationSchemaManyClass) || !($node->schema instanceof $relationSchemaManyClass))
+        ) {
+            return false;
+        }
+
+        // Only treat single item nodes, not arrays
+        $type = $node->schema->getType();
+        if ($type !== 'object' && $type !== 'array') {
             return false;
         }
 
