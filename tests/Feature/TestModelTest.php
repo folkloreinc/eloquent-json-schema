@@ -3,8 +3,8 @@
 class TestModelTest extends TestCase
 {
     use RunMigrationsTrait;
-    
-    protected function setUp()
+
+    protected function setUp(): void
     {
         parent::setUp();
 
