@@ -2,11 +2,13 @@
 
 class TestModelTest extends TestCase
 {
+    use RunMigrationsTrait;
+    
     protected function setUp()
     {
         parent::setUp();
 
-        $this->loadMigrationsFrom(__DIR__ . '/../fixture/migrations');
+        $this->runMigrations();
     }
 
     /**
