@@ -159,11 +159,7 @@ trait HasJsonSchema
             return $value;
         }
 
-        if (method_exists($this, 'castAttributeAsJson')) {
-            $value = $this->castAttributeAsJson($key, $value);
-        } else {
-            $value = $this->asJson($value);
-        }
+        $value = $this->castAttributeAsJson($key, $value);
 
         return $value;
     }
