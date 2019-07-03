@@ -1,16 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-
 class TestModelTest extends TestCase
 {
-    use DatabaseMigrations;
-
     protected function setUp()
     {
         parent::setUp();
 
-        $this->loadMigrationsFrom(realpath(__DIR__ . '/../fixture/migrations'));
+        $this->loadMigrationsFrom(__DIR__ . '/../fixture/migrations');
     }
 
     /**
