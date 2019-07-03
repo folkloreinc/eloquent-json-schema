@@ -36,18 +36,22 @@ class Node implements ArrayAccess, Arrayable, Jsonable, JsonSerializable
 
     public function isInPath($path)
     {
-        return preg_match('/^'.preg_quote($path).'(\..+)?$/', $this->path);
+        return preg_match('/^' . preg_quote($path) . '(\..+)?$/', $this->path);
     }
 
     public function prependPath($path)
     {
-        $this->path = $path.'.'.$this->path;
+        $this->path = $path . '.' . $this->path;
         return $this;
     }
 
     public function removePath($path)
     {
-        $this->path = preg_replace('/^'.preg_quote($path).'(\.(.+))?$/', '$2', $this->path);
+        $this->path = preg_replace(
+            '/^' . preg_quote($path) . '(\.(.+))?$/',
+            '$2',
+            $this->path
+        );
         return $this;
     }
 

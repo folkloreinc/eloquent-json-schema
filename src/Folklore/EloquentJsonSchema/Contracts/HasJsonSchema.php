@@ -14,7 +14,7 @@ interface HasJsonSchema
 
     public function getAttributeJsonSchemaReducers($key);
 
-    public function hasJsonSchema($key);
+    public function attributeHasJsonSchema($key);
 
     public function getJsonSchemas();
 

@@ -20,11 +20,16 @@ class JsonSchemaValidator
         $valueObject = $value;
         if ($value instanceof Arrayable) {
             $valueObject = $value->toArray();
-        } else if (is_array($value) && $this->arrayIsAssociative($value)) {
-            $valueObject = (object)$value;
+        } elseif (is_array($value) && $this->arrayIsAssociative($value)) {
+            $valueObject = (object) $value;
         }
-        $schemaObject = $schema instanceof Arrayable ? $schema->toArray() : $schema;
-        $this->validator->validate($valueObject, $schemaObject, Constraint::CHECK_MODE_APPLY_DEFAULTS);
+        $schemaObject =
+            $schema instanceof Arrayable ? $schema->toArray() : $schema;
+        $this->validator->validate(
+            $valueObject,
+            $schemaObject,
+            Constraint::CHECK_MODE_APPLY_DEFAULTS
+        );
         return $this->validator->isValid();
     }
 
@@ -51,19 +56,27 @@ class JsonSchemaValidator
         return $messages;
     }
 
-    protected function arrayIsAssociative($arr) {
+    protected function arrayIsAssociative($arr)
+    {
         if (array() === $arr) {
             return false;
         }
-        return array_reduce(array_keys($arr), function($isAssociative, $key) {
-            return $isAssociative || !is_numeric($key);
-        }, false);
+        return array_reduce(
+            array_keys($arr),
+            function ($isAssociative, $key) {
+                return $isAssociative || !is_numeric($key);
+            },
+            false
+        );
     }
 
     public function __call($method, $parameters)
     {
         if (method_exists($this->validator, $method)) {
-            return call_user_func_array([$this->validator, $method], $parameters);
+            return call_user_func_array(
+                [$this->validator, $method],
+                $parameters
+            );
         }
     }
 }

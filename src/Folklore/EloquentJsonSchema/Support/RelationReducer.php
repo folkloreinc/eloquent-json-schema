@@ -10,12 +10,40 @@ use Folklore\EloquentJsonSchema\Node;
 
 abstract class RelationReducer extends Reducer
 {
+    /**
+     * Get the relation model class
+     * @param \Illuminate\Database\Eloquent\Model $model The current model
+     * @param \Folklore\EloquentJsonSchema\Node $node The schema node
+     * @param mixed $state The current state
+     * @return string
+     */
     abstract protected function getRelationClass($model, $node, $state);
 
+    /**
+     * Get the relation schema class
+     * @param \Illuminate\Database\Eloquent\Model $model The current model
+     * @param \Folklore\EloquentJsonSchema\Node $node The schema node
+     * @param mixed $state The current state
+     * @return string
+     */
     abstract protected function getRelationSchemaClass($model, $node, $state);
 
+    /**
+     * Get the relation "many" schema class
+     * @param \Illuminate\Database\Eloquent\Model $model The current model
+     * @param \Folklore\EloquentJsonSchema\Node $node The schema node
+     * @param mixed $state The current state
+     * @return string
+     */
     abstract protected function getRelationSchemaManyClass($model, $node, $state);
 
+    /**
+     * Get the relationship name
+     * @param \Illuminate\Database\Eloquent\Model $model The current model
+     * @param \Folklore\EloquentJsonSchema\Node $node The schema node
+     * @param mixed $state The current state
+     * @return string
+     */
     abstract protected function getRelationName($model, $node, $state);
 
     // @TODO add checks everywhere required

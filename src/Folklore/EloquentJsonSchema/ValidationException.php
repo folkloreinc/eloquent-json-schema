@@ -12,7 +12,11 @@ class ValidationException extends RuntimeException
     {
         $this->prefix = $prefix;
         $this->schemaErrors = $schemaErrors;
-        parent::__construct('Error(s) while validating the schema:'.PHP_EOL.$this->getDetailedMessage($schemaErrors));
+        parent::__construct(
+            'Error(s) while validating the schema:' .
+                PHP_EOL .
+                $this->getDetailedMessage($schemaErrors)
+        );
     }
 
     public function getSchemaErrors()
@@ -23,11 +27,11 @@ class ValidationException extends RuntimeException
     protected function getDetailedMessage($schemaErrors)
     {
         $lines = [];
-        $prefix = !is_null($this->prefix) ? $this->prefix.'.' : '';
+        $prefix = !is_null($this->prefix) ? $this->prefix . '.' : '';
         foreach ($schemaErrors as $key => $value) {
-            $messages = (array)$value;
+            $messages = (array) $value;
             foreach ($messages as $message) {
-                $lines[] = '['.$prefix.$key.']: '.$message;
+                $lines[] = '[' . $prefix . $key . ']: ' . $message;
             }
         }
         return implode(PHP_EOL, $lines);
