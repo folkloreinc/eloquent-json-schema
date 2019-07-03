@@ -10,13 +10,6 @@ class JsonSchemaTest extends TestCase
 {
     protected $schema;
 
-    public function setUp()
-    {
-        parent::setUp();
-
-        $this->schema = new JsonSchema();
-    }
-
     /**
      * Test getting properties
      *
@@ -32,8 +25,9 @@ class JsonSchemaTest extends TestCase
                 'type' => 'integer'
             ]
         ];
-        $this->schema->setProperties($data);
-        $returnedData = $this->schema->getProperties();
+        $schema = new JsonSchema();
+        $schema->setProperties($data);
+        $returnedData = $schema->getProperties();
         $this->assertArrayHasKey('data', $returnedData);
         $this->assertInstanceOf(JsonSchema::class, $returnedData['data']);
         $this->assertEquals($data['data']['type'], $returnedData['data']['type']);
@@ -64,8 +58,9 @@ class JsonSchemaTest extends TestCase
                 ]
             ]
         ];
-        $this->schema->setProperties($data);
-        $nodes = $this->schema->getNodes();
+        $schema = new JsonSchema();
+        $schema->setProperties($data);
+        $nodes = $schema->getNodes();
 
         $this->assertInstanceOf(NodesCollection::class, $nodes);
 
@@ -81,7 +76,7 @@ class JsonSchemaTest extends TestCase
             $this->assertEquals($paths[$node->path], $node->type);
         }
 
-        $nodes = $this->schema->getNodes('data');
+        $nodes = $schema->getNodes('data');
 
         $paths = [
             '' => 'object',
@@ -147,8 +142,9 @@ class JsonSchemaTest extends TestCase
                 ],
             ],
         ];
-        $this->schema->setProperties($properties);
-        $nodes = $this->schema->getNodesFromData($data);
+        $schema = new JsonSchema();
+        $schema->setProperties($properties);
+        $nodes = $schema->getNodesFromData($data);
 
         $this->assertInstanceOf(NodesCollection::class, $nodes);
 
@@ -172,7 +168,7 @@ class JsonSchemaTest extends TestCase
             $this->assertEquals($paths[$node->path], $node->type);
         }
 
-        $nodes = $this->schema->getNodesFromData($data, 'data');
+        $nodes = $schema->getNodesFromData($data, 'data');
 
         $paths = [
             '' => 'object',
