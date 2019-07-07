@@ -19,6 +19,8 @@ trait HasJsonSchema
 
     protected $savingJsonSchemas = false;
 
+    protected $jsonSchemas;
+
     public static function bootHasJsonSchema()
     {
         static::observe(JsonSchemaObserver::class);
