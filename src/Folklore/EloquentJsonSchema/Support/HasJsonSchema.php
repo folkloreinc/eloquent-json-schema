@@ -55,6 +55,9 @@ trait HasJsonSchema
         $attributes = $this->getJsonSchemaAttributes();
         foreach ($attributes as $key) {
             $schema = $this->getAttributeJsonSchema($key);
+            if (is_null($schema)) {
+                continue;
+            }
             $value = $this->getAttributeValue($key);
             if (!$validator->validateSchema($value, $schema)) {
                 throw new ValidationException($validator->getMessages(), $key);
@@ -251,12 +254,11 @@ trait HasJsonSchema
      */
     public function getAttributeJsonSchema($key)
     {
-        $schemas = $this->attributeHasJsonSchema($key)
-            ? $this->getJsonSchemas()
-            : static::getDefaultJsonSchemas();
-        if (!array_key_exists($key, $schemas)) {
+        if (!$this->attributeHasJsonSchema($key)) {
             return null;
         }
+
+        $schemas = $this->getJsonSchemas();
 
         $schema = is_string($schemas[$key])
             ? app($schemas[$key])
@@ -343,7 +345,7 @@ trait HasJsonSchema
      */
     public function getJsonSchemas()
     {
-        return isset($this->jsonSchemas) ? $this->jsonSchemas : [];
+        return isset($this->jsonSchemas) ? $this->jsonSchemas : static::getDefaultJsonSchemas();
     }
 
     /**
