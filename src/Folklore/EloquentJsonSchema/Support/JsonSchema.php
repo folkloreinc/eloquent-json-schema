@@ -22,7 +22,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     protected $default;
     protected $items;
     protected $enum;
-    protected $attributes;
+    protected $attributes = [];
     protected $reducers;
     protected $schemaAttributes = ['nullable', 'type', 'properties', 'required', 'default', 'items', 'enum', 'appends'];
 
