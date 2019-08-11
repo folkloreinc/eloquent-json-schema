@@ -21,13 +21,4 @@ class TestDataSchema extends JsonSchema
             'child' => TestChildSchema::class,
         ];
     }
-
-    protected function reducers()
-    {
-        return [
-            TestSlugReducer::class,
-            TestChildrenReducer::class,
-            TestChildrenWithPivotReducer::class,
-        ];
-    }
 }

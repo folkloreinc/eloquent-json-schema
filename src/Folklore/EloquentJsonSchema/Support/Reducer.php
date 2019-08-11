@@ -2,25 +2,20 @@
 
 namespace Folklore\EloquentJsonSchema\Support;
 
-use Folklore\EloquentJsonSchema\Contracts\ReducerGetter;
-use Folklore\EloquentJsonSchema\Contracts\ReducerSetter;
-use Folklore\EloquentJsonSchema\Contracts\ReducerSaver;
+use Folklore\EloquentJsonSchema\Contracts\Reducer\Get;
+use Folklore\EloquentJsonSchema\Contracts\Reducer\Set;
 use Folklore\EloquentJsonSchema\Contracts\HasJsonSchema as HasJsonSchemaContract;
 use Folklore\EloquentJsonSchema\Node;
+use Folklore\EloquentJsonSchema\NodesCollection;
 
-class Reducer implements ReducerGetter, ReducerSetter, ReducerSaver
+class Reducer implements Get, Set
 {
-    public function get(HasJsonSchemaContract $model, Node $node, $value)
+    public function get($value, Node $node, HasJsonSchemaContract $model)
     {
         return $value;
     }
 
-    public function set(HasJsonSchemaContract $model, Node $node, $value)
-    {
-        return $value;
-    }
-
-    public function save(HasJsonSchemaContract $model, Node $node, $value)
+    public function set($value, Node $node, HasJsonSchemaContract $model)
     {
         return $value;
     }

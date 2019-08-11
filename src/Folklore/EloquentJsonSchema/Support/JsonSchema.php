@@ -6,6 +6,8 @@ use ArrayAccess;
 use JsonSerializable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Folklore\EloquentJsonSchema\Contracts\JsonSchema as JsonSchemaContract;
 use Folklore\EloquentJsonSchema\Node;
 use Folklore\EloquentJsonSchema\NodesCollection;
@@ -21,7 +23,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     protected $items;
     protected $enum;
     protected $attributes;
-    protected $reducers = [];
+    protected $reducers;
     protected $schemaAttributes = ['nullable', 'type', 'properties', 'required', 'default', 'items', 'enum', 'appends'];
 
     public function __construct($schema = [])
@@ -214,7 +216,7 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
 
     public function setReducers($value)
     {
-        return $this->setSchemaAttribute('reducers', $value);
+        return $this->setSchemaAttribute('reducers', !is_null($value) ? $value : null);
     }
 
     public function addReducer($value)
@@ -245,83 +247,6 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     {
         $this->{$key} = $value;
         return $this;
-    }
-
-    public function getNodes($root = null)
-    {
-        $type = $this->getType();
-
-        // get properties
-        $properties = [];
-        if ($type === 'object') {
-            $properties = $this->getProperties();
-        } elseif ($type === 'array') {
-            $items = $this->getItems();
-            if ($items instanceof JsonSchemaContract || (is_array($items) && isset($items['type']))) {
-                $properties = [
-                    '*' => $items
-                ];
-            } else {
-                $properties = $items;
-            }
-        }
-        // @TODO Handle other types
-
-        $nodes = new NodesCollection();
-        foreach ($properties as $name => $propertySchema) {
-            $propertyPath = $name;
-            $schemaNode = new Node();
-            $schemaNode->path = $propertyPath;
-
-            if ($propertySchema instanceof JsonSchemaContract) {
-                $schemaNode->type = $propertySchema->getName();
-                $schemaNode->schema = $propertySchema;
-
-                $nodes->push($schemaNode);
-                $propertyNodes = $propertySchema->getNodes()->prependPath($propertyPath);
-                $nodes = $nodes->merge($propertyNodes);
-            } else {
-                $schemaNode->type = array_get($propertySchema, 'type');
-
-                $nodes->push($schemaNode);
-            }
-        }
-        return $root !== null ? $nodes->fromPath($root) : $nodes;
-    }
-
-    public function getNodesFromData($data, $root = null)
-    {
-        $nodes = $this->getNodes($root);
-        $dataArray = !is_null($data) ? json_decode(json_encode($data), true) : [];
-        $dataPaths = is_array($dataArray) ? array_keys(array_dot($dataArray)) : [];
-        return $nodes->reduce(function ($collection, $node) use ($dataPaths, $data) {
-            $paths = $this->getMatchingPaths($dataPaths, $node->path);
-            foreach ($paths as $path) {
-                $newNode = clone $node;
-                $newNode->path = $path;
-                $collection->push($newNode);
-            }
-            return $collection;
-        }, new NodesCollection());
-    }
-
-    protected function getMatchingPaths($dataPaths, $path)
-    {
-        if (sizeof(explode('*', $path)) <= 1) {
-            return [$path];
-        }
-
-        $matchingPaths = [];
-        $pattern = !empty($path) && $path !== '*' ?
-            '/^('.str_replace('\*', '[^\.]+', preg_quote($path)).')/' : '/^(.*)/';
-        foreach ($dataPaths as $dataPath) {
-            if (preg_match($pattern, $dataPath, $matches)) {
-                if (!in_array($matches[1], $matchingPaths)) {
-                    $matchingPaths[] = $matches[1];
-                }
-            }
-        }
-        return $matchingPaths;
     }
 
     public function toArray()
@@ -490,19 +415,17 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
      * @param  string  $key
      * @return void
      */
-    public function __call($method, $parameters)
-    {
-        $accessorMethods = [];
-        $mutatorsMethods = [];
-        foreach ($this->schemaAttributes as $attribute) {
-            $methodAttribute = studly_case($attribute);
-            if ($method === 'get'.$methodAttribute) {
-                return $this->getSchemaAttribute($attribute);
-                break;
-            } elseif ($method === 'set'.$methodAttribute) {
-                return $this->setSchemaAttribute($attribute, $parameters[0]);
-                break;
-            }
-        }
-    }
+     public function __call($method, $parameters)
+     {
+         if (preg_match('/^(get|set|with)([A-Z].*)$/i', $method, $matches)) {
+             $methodAttribute = Str::snake($matches[2]);
+             $foundAttribute = Arr::first($this->schemaAttributes, function($attribute) use ($methodAttribute) {
+                 return $methodAttribute === Str::snake($attribute);
+             });
+             if (!is_null($foundAttribute)) {
+                 $methodPrefix = $matches[1] === 'with' ? 'get' : $matches[1];
+                 return $this->{$methodPrefix.'SchemaAttribute'}($foundAttribute);
+             }
+         }
+     }
 }

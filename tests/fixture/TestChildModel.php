@@ -7,10 +7,10 @@ class TestChildModel extends Model
     protected $table = 'children';
 
     protected $casts = [
-        'data' => 'json_schema',
+        'data' => 'json'
     ];
 
-    protected $jsonSchemas = [
-        'data' => TestChildDataSchema::class,
-    ];
+    public function data() {
+        return $this->jsonSchema(TestChildDataSchema::class);
+    }
 }

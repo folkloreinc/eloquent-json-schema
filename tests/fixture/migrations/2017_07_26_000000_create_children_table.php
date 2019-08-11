@@ -16,13 +16,11 @@ class CreateChildrenTable extends Migration
         Schema::create('children', function (Blueprint $table) {
             $table->increments('id');
             $table->integer('test_id')->unsigned()->nullable();
-            $table->string('test_handle')->nullable();
             $table->longText('data')->nullable();
             $table->longText('metadata')->nullable();
             $table->timestamps();
 
             $table->index('test_id');
-            $table->index('test_handle');
         });
     }
 

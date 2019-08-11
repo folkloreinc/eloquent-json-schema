@@ -2,6 +2,7 @@
 
 namespace Folklore\EloquentJsonSchema;
 
+use Folklore\EloquentJsonSchema\Contracts\JsonSchema as JsonSchemaContract;
 use JsonSchema\Validator;
 use JsonSchema\Constraints\Constraint;
 use Illuminate\Contracts\Support\Arrayable;
@@ -15,7 +16,7 @@ class JsonSchemaValidator
         $this->validator = new Validator();
     }
 
-    public function validateSchema($value, $schema)
+    public function validateSchema($value, JsonSchemaContract $schema)
     {
         $valueObject = $value;
         if ($value instanceof Arrayable) {

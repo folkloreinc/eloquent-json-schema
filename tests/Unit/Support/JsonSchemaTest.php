@@ -60,9 +60,7 @@ class JsonSchemaTest extends TestCase
         ];
         $schema = new JsonSchema();
         $schema->setProperties($data);
-        $nodes = $schema->getNodes();
-
-        $this->assertInstanceOf(NodesCollection::class, $nodes);
+        $nodes = NodesCollection::makeFromSchema($schema);
 
         $paths = [
             'data' => 'object',
@@ -76,7 +74,7 @@ class JsonSchemaTest extends TestCase
             $this->assertEquals($paths[$node->path], $node->type);
         }
 
-        $nodes = $schema->getNodes('data');
+        $nodes = NodesCollection::makeFromSchema($schema, null, 'data');
 
         $paths = [
             '' => 'object',
@@ -144,9 +142,7 @@ class JsonSchemaTest extends TestCase
         ];
         $schema = new JsonSchema();
         $schema->setProperties($properties);
-        $nodes = $schema->getNodesFromData($data);
-
-        $this->assertInstanceOf(NodesCollection::class, $nodes);
+        $nodes = NodesCollection::makeFromSchema($schema, $data);
 
         $paths = [
             'data' => 'object',
@@ -168,7 +164,7 @@ class JsonSchemaTest extends TestCase
             $this->assertEquals($paths[$node->path], $node->type);
         }
 
-        $nodes = $schema->getNodesFromData($data, 'data');
+        $nodes = NodesCollection::makeFromSchema($schema, $data, 'data');
 
         $paths = [
             '' => 'object',

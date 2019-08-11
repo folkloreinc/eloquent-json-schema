@@ -30,7 +30,6 @@ class TestModelTest extends TestCase
         $model->save();
 
         $this->assertEquals($rawData, $model->data);
-        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
     }
 
     /**
@@ -81,8 +80,7 @@ class TestModelTest extends TestCase
 
         $this->assertEquals($child->id, $model->data['children'][0]->id);
         $this->assertEquals($child->id, $model->children[0]->id);
-        $this->assertEquals('data.children.0', $model->children[0]->test_handle);
-        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+        $this->assertEquals($rawData, array_only(json_decode($model->getAttributes()['data'], true), array_keys($rawData)));
 
         // Remove children
         $data = [
@@ -93,13 +91,12 @@ class TestModelTest extends TestCase
         $rawData = array_merge([], $data, [
             'slug' => str_slug($data['name']),
         ]);
-        $model = new TestModel();
         $model->data = $data;
         $model->save();
         $model->load('children');
         $this->assertEquals(0, sizeof($model->data['children']));
         $this->assertEquals(0, sizeof($model->children));
-        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+        $this->assertEquals($rawData, array_only(json_decode($model->getAttributes()['data'], true), array_keys($rawData)));
     }
 
     /**
@@ -107,7 +104,7 @@ class TestModelTest extends TestCase
      *
      * @test
      */
-    public function testModelChildrenWithPivot()
+    public function testModelChildreenWithPivot()
     {
         $childData = [
             'name' => 'Child',
@@ -133,8 +130,7 @@ class TestModelTest extends TestCase
 
         $this->assertEquals($child->id, $model->data['childrenWithPivot'][0]->id);
         $this->assertEquals($child->id, $model->childrenWithPivot[0]->id);
-        $this->assertEquals('data.childrenWithPivot.0', $model->childrenWithPivot[0]->pivot->handle);
-        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+        $this->assertEquals($rawData, array_only(json_decode($model->getAttributes()['data'], true), array_keys($rawData)));
 
         // Remove children
         $data = [
@@ -151,6 +147,6 @@ class TestModelTest extends TestCase
         $model->load('childrenWithPivot');
         $this->assertEquals(0, sizeof($model->data['childrenWithPivot']));
         $this->assertEquals(0, sizeof($model->childrenWithPivot));
-        $this->assertEquals(json_encode($rawData), $model->getAttributes()['data']);
+        $this->assertEquals($rawData, array_only(json_decode($model->getAttributes()['data'], true), array_keys($rawData)));
     }
 }

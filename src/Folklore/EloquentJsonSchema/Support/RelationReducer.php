@@ -2,117 +2,209 @@
 
 namespace Folklore\EloquentJsonSchema\Support;
 
-use Illuminate\Contracts\Logging\Log;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Folklore\EloquentJsonSchema\Contracts\HasJsonSchema as HasJsonSchemaContract;
+use Folklore\EloquentJsonSchema\Contracts\Reducer\Save;
+use Folklore\EloquentJsonSchema\Contracts\Reducer\Commit;
 use Folklore\EloquentJsonSchema\Node;
+use Folklore\EloquentJsonSchema\NodesCollection;
 
-abstract class RelationReducer extends Reducer
+abstract class RelationReducer extends Reducer implements Save, Commit
 {
-    /**
-     * Get the relation model class
-     * @param \Illuminate\Database\Eloquent\Model $model The current model
-     * @param \Folklore\EloquentJsonSchema\Node $node The schema node
-     * @param mixed $state The current state
-     * @return string
-     */
-    abstract protected function getRelationClass($model, $node, $state);
-
     /**
      * Get the relation schema class
      * @param \Illuminate\Database\Eloquent\Model $model The current model
      * @param \Folklore\EloquentJsonSchema\Node $node The schema node
-     * @param mixed $state The current state
+     * @param mixed $value The current state
      * @return string
      */
-    abstract protected function getRelationSchemaClass($model, $node, $state);
-
-    /**
-     * Get the relation "many" schema class
-     * @param \Illuminate\Database\Eloquent\Model $model The current model
-     * @param \Folklore\EloquentJsonSchema\Node $node The schema node
-     * @param mixed $state The current state
-     * @return string
-     */
-    abstract protected function getRelationSchemaManyClass($model, $node, $state);
+    abstract protected function getRelationSchemaClass($value, $node, $model);
 
     /**
      * Get the relationship name
      * @param \Illuminate\Database\Eloquent\Model $model The current model
      * @param \Folklore\EloquentJsonSchema\Node $node The schema node
-     * @param mixed $state The current state
+     * @param mixed $value The current state
      * @return string
      */
-    abstract protected function getRelationName($model, $node, $state);
+    abstract protected function getRelationName($value, $node, $model);
 
-    // @TODO add checks everywhere required
-    public function get(HasJsonSchemaContract $model, Node $node, $state)
+    /**
+     * Reduce a new value when getting an attribute
+     * @param  mixed $value The current value
+     * @param  Node $node The current node
+     * @param  HasJsonSchemaContract $model The current model
+     * @return mixed
+     */
+    public function get($value, Node $node, HasJsonSchemaContract $model)
     {
-        if (!$this->shouldUseReducer($model, $node, $state)) {
-            return $state;
+        if (!$this->shouldUseReducer($value, $node, $model)) {
+            return $value;
         }
 
-        $id = Utils::getPath($state, $node->path);
-        $relationName = $this->getRelationName($model, $node, $state);
-        $value = $this->mutateRelationIdToObject($model, $relationName, $id);
+        $relationKey = Utils::getPath($value, $node->path);
+        $relationName = $this->getRelationName($value, $node, $model);
+        $relationModel = $this->mutateRelationKeyToModel(
+            $model,
+            $relationName,
+            $relationKey
+        );
 
-        // Fallback to query if not found in relations and model doesn't exists
-        if ($this->shouldQueryRelation($model, $node, $state, $value)) {
-            $relationClass = $this->getRelationClass($model, $node, $state);
-            $resolvedRelationClass = get_class(app($relationClass));
-            $value = $resolvedRelationClass::find($id);
+        if ($relationModel !== $relationKey) {
+            return Utils::setPath($value, $node->path, $relationModel);
         }
 
-        if ($value !== $id) {
-            return Utils::setPath($state, $node->path, $value);
-        }
-
-        return $state;
+        return $value;
     }
 
-    // @TODO add checks everywhere required
-    public function set(HasJsonSchemaContract $model, Node $node, $state)
+    /**
+     * Reduce a new value when setting an attribute
+     * @param  mixed $value The current value
+     * @param  Node $node The current node
+     * @param  HasJsonSchemaContract $model The current model
+     * @return mixed
+     */
+    public function set($value, Node $node, HasJsonSchemaContract $model)
     {
-        if (!$this->shouldUseReducer($model, $node, $state)) {
-            return $state;
+        if (!$this->shouldUseReducer($value, $node, $model)) {
+            return $value;
         }
 
-        $originalValue = Utils::getPath($state, $node->path);
-        $relationName = $this->getRelationName($model, $node, $state);
-        $value = $this->mutateRelationObjectToId($model, $relationName, $originalValue);
+        $relationModel = Utils::getPath($value, $node->path);
+        $relationName = $this->getRelationName($value, $node, $model);
+        $relationKey = $this->mutateRelationModelToKey(
+            $model,
+            $relationName,
+            $relationModel
+        );
 
-        if ($value !== $originalValue) {
-            return Utils::setPath($state, $node->path, $value);
+        if ($relationKey !== $relationModel) {
+            return Utils::setPath($value, $node->path, $relationKey);
         }
 
-        return $state;
+        return $value;
     }
 
-    // @TODO add checks everywhere required
-    public function save(HasJsonSchemaContract $model, Node $node, $state)
+    /**
+     * Reduce a new value when saving a model
+     * @param  mixed $value The current value
+     * @param  Node $node The current node
+     * @param  HasJsonSchemaContract $model The current model
+     * @return mixed
+     */
+    public function save($value, Node $node, HasJsonSchemaContract $model)
     {
-        if (!$this->shouldUseSaveReducer($model, $node, $state)) {
-            return $state;
+        if (!$this->shouldUseReducer($value, $node, $model)) {
+            return $value;
         }
 
-        $item = Utils::getPath($state, $node->path);
-        $relationName = $this->getRelationName($model, $node, $state);
-        if (is_null($relationName)) {
-            return $state;
-        }
+        $relationName = $this->getRelationName($value, $node, $model);
         if (!$model->relationLoaded($relationName)) {
             $model->load($relationName);
         }
-        $relationSchemaClass = $this->getRelationSchemaClass($model, $node, $state);
-        $relationSchemaManyClass = $this->getRelationSchemaManyClass($model, $node, $state);
-        if (!is_null($relationSchemaClass) && $node->schema instanceof $relationSchemaClass) {
-            $this->updateRelationAtPathWithItem($model, $relationName, $node->path, $item);
-        } elseif (!is_null($relationSchemaManyClass) && $node->schema instanceof $relationSchemaManyClass) {
-            $this->updateRelationsAtPathWithItems($model, $relationName, $node->path, $item);
-        }
 
-        return $state;
+        $metadata = $this->getPendingMetadata($model, $value);
+
+        $relationKey = Utils::getPath($value, $node->path);
+        if (!is_null($relationKey)) {
+            if (!isset($metadata[$relationName])) {
+                $metadata[$relationName] = [];
+            }
+            $metadata[$relationName][$node->path] = $relationKey instanceof Model ? $relationKey->getKey() : $relationKey;
+        }
+        $value = $this->setPendingMetadata($model, $value, $metadata);
+
+        return $value;
+    }
+
+    public function commit($value, NodesCollection $collection, HasJsonSchemaContract $model)
+    {
+        $currentMetadata = $this->getMetadata($model, $value);
+        $pendingMetadata = $this->getPendingMetadata($model, $value);
+        $relations = array_unique(array_merge(array_keys($currentMetadata), array_keys($pendingMetadata)));
+        // dump('COMMIT');
+        // dump($value, $currentMetadata, $pendingMetadata, $relations);
+        foreach ($relations as $relation) {
+            $currentPaths = array_get($currentMetadata, $relation, []);
+            $pendingPaths = array_get($pendingMetadata, $relation, []);
+            $currentKeys = array_unique(array_values($currentPaths));
+            $pendingKeys = array_unique(array_values($pendingPaths));
+            $keysToDetach = array_diff($currentKeys, $pendingKeys);
+            $keysToAttach = array_diff($pendingKeys, $currentKeys);
+            // dump($keysToDetach, $keysToAttach);
+            foreach ($keysToDetach as $keyToDetach) {
+                $this->detachRelation($model, $relation, $keyToDetach);
+            }
+            foreach ($keysToAttach as $keyToAttach) {
+                $this->attachRelation($model, $relation, $keyToAttach);
+            }
+        }
+        $value = $this->setMetadata($model, $value, $pendingMetadata);
+        $value = $this->setPendingMetadata($model, $value, []);
+        $model->setAttribute($collection->getAttribute(), $value);
+        $model->save();
+        return $value;
+    }
+
+    protected function detachRelation($model, $relationName, $relationKey)
+    {
+        $relation = $model->$relationName();
+        if ($relation instanceof BelongsToMany) {
+            $relation->detach($relationKey);
+        } else {
+            $relationModel = $this->findRelationFromKey($model, $relationName, $relationKey);
+            $relationModel->setAttribute($relation->getForeignKeyName(), null);
+            $relationModel->save();
+        }
+    }
+
+    protected function attachRelation($model, $relationName, $relationKey)
+    {
+        $relation = $model->$relationName();
+        if ($relation instanceof BelongsToMany) {
+            $relation->attach($relationKey);
+        } else {
+            $relationModel = $this->findRelationFromKey($model, $relationName, $relationKey);
+            $relation->save($relationModel);
+        }
+    }
+
+    protected function getMetadata(HasJsonSchemaContract $model, $value)
+    {
+        $key = $this->getMetadataKey($model);
+        return Utils::getPath($value, $key, []);
+    }
+
+    protected function setMetadata(HasJsonSchemaContract $model, $value, $metadata)
+    {
+        $key = $this->getMetadataKey($model);
+        return Utils::setPath($value, $key, $metadata);
+    }
+
+    protected function getPendingMetadata(HasJsonSchemaContract $model, $value)
+    {
+        $key = $this->getMetadataKey($model, true);
+        return Utils::getPath($value, $key, []);
+    }
+
+    protected function setPendingMetadata(HasJsonSchemaContract $model, $value, $metadata)
+    {
+        $key = $this->getMetadataKey($model, true);
+        return Utils::setPath($value, $key, $metadata);
+    }
+
+    protected function getMetadataNamespace(HasJsonSchemaContract $model, $pending = false)
+    {
+        return sprintf('%s.relation_reducers.%s', $model->getJsonSchemaMetadataNamespace(), $pending ? 'pending' : 'current');
+    }
+
+    protected function getMetadataKey(HasJsonSchemaContract $model, $pending = false)
+    {
+        return sprintf('%s.%s', $this->getMetadataNamespace($model, $pending), snake_case(class_basename($this)));
     }
 
     protected function shouldUpdateRelation($model, $relation)
@@ -120,27 +212,22 @@ abstract class RelationReducer extends Reducer
         return false;
     }
 
-    protected function shouldQueryRelation($model, $node, $state, $value)
+    protected function shouldUseReducer($value, $node, $model)
     {
-        $relationName = $this->getRelationName($model, $node, $state);
-        $relationClass = $model->{$relationName}();
-        return is_null($value) && (
-            $model->isSavingJsonSchemas() ||
-            $relationClass instanceof HasOneOrMany ||
-            !$model->exists ||
-            sizeof($model->getDirtyJsonSchemas())
-        );
-    }
-
-    protected function shouldUseReducer($model, $node, $state)
-    {
-        if (is_null($state)) {
+        if (is_null($value)) {
             return false;
         }
 
         // Only treat relations matching the associated schema class
-        $relationSchemaClass = $this->getRelationSchemaClass($model, $node, $state);
-        if (is_null($relationSchemaClass) || !($node->schema instanceof $relationSchemaClass)) {
+        $relationSchemaClass = $this->getRelationSchemaClass(
+            $model,
+            $node,
+            $value
+        );
+        if (
+            is_null($relationSchemaClass) ||
+            !($node->schema instanceof $relationSchemaClass)
+        ) {
             return false;
         }
 
@@ -152,273 +239,140 @@ abstract class RelationReducer extends Reducer
         return true;
     }
 
-    protected function shouldUseSaveReducer($model, $node, $state)
-    {
-        if (is_null($state)) {
-            return false;
-        }
-
-        // Only treat relations matching the associated schema class
-        $relationSchemaClass = $this->getRelationSchemaClass($model, $node, $state);
-        $relationSchemaManyClass = $this->getRelationSchemaManyClass($model, $node, $state);
-        if ((is_null($relationSchemaClass) || !($node->schema instanceof $relationSchemaClass))
-            && (is_null($relationSchemaManyClass) || !($node->schema instanceof $relationSchemaManyClass))
-        ) {
-            return false;
-        }
-
-        // Only treat single item nodes, not arrays
-        $type = $node->schema->getType();
-        if ($type !== 'object' && $type !== 'array') {
-            return false;
-        }
-
-        return true;
-    }
-
-    protected function mutateRelationIdToObject($model, $relationName, $id)
-    {
-        $method = 'mutate'.studly_case($relationName).'RelationIdToObject';
+    protected function mutateRelationKeyToModel(
+        $model,
+        $relation,
+        $relationKey,
+        $force = false
+    ) {
+        $method = sprintf('mutate%sRelationKeyToModel', studly_case($relation));
         if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relationName, $id);
+            return $this->{$method}($model, $relation, $relationKey);
         }
 
-        if (is_null($id)) {
-            return null;
+        if (is_null($relationKey) || $relationKey instanceof Model) {
+            return $relationKey;
         }
 
-        if (is_object($id)) {
-            return $id;
+        if (!$model->exists || $force) {
+            return $this->findRelationFromKey($model, $relation, $relationKey);
         }
 
-        if (!$model->relationLoaded($relationName)) {
+        if (!$model->relationLoaded($relation)) {
             if (config('json-schema.debug', false)) {
-                app(Log::class)->warning(
-                    'Relation "'.$relationName.'" is needed for reducer '.get_class($this).' but not explicitly loaded'
+                Log::warning(
+                    sprintf(
+                        'Relation "%s" is needed for reducer %s but not explicitly loaded',
+                        $relation,
+                        get_class($this)
+                    )
                 );
             }
             return null;
         }
 
-        $relation = $model->getRelation($relationName);
-        return $relation->first(function ($item, $key) use ($relationName, $id) {
-            if (!is_object($item)) {
-                $item = $key;
-            }
-            return $this->getRelationIdFromModel($relationName, $item) === (string)$id;
-        });
+        return $model
+            ->getRelation($relation)
+            ->first(function ($item, $key) use ($relation, $relationKey) {
+                return $this->getRelationKeyFromModel($relation, $item) ===
+                    (string) $relationKey;
+            });
     }
 
-    protected function getRelationIdFromModel($relation, $item)
-    {
-        $method = 'get'.studly_case($relation).'RelationIdFromModel';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($relation, $item);
-        }
-
-        return isset($item) ? (string)($item->id) : null;
-    }
-
-    protected function mutateRelationObjectToId($model, $relation, $object)
-    {
-        if (is_null($object)) {
+    protected function mutateRelationModelToKey(
+        $model,
+        $relation,
+        $relationModel
+    ) {
+        if (is_null($relationModel)) {
             return null;
         }
 
-        if (!is_object($object) && !is_array($object)) {
-            return $object;
+        if (is_numeric($relationModel) || is_string($relationModel)) {
+            return (string) $relationModel;
         }
 
-        $id = $this->getRelationIdFromObject($relation, $object);
-        if (is_null($id)) {
-            $item = $this->createRelationModelFromObject($model, $relation, $object);
-            if (!is_null($item)) {
-                $id = $this->getRelationIdFromModel($relation, $item);
+        // prettier-ignore
+        if (is_array($relationModel) ||
+            (is_object($relationModel) && !($relationModel instanceof Model))
+        ) {
+            $relatedModel = $this->getRelatedModel($model, $relation);
+            $relatedModel->fill(
+                $relationModel instanceof Arrayable
+                    ? $relationModel->toArray()
+                    : (array) $relationModel
+            );
+            $relationModel = $relatedModel;
+        }
+
+        $relationKey = $this->getRelationKeyFromModel(
+            $relation,
+            $relationModel
+        );
+
+        // If relation key doesn't exists, create the relation
+        if (is_null($relationKey)) {
+            $newModel = $this->createRelationModel(
+                $model,
+                $relation,
+                $relationModel
+            );
+            if (!is_null($newModel)) {
+                $relationKey = $this->getRelationKeyFromModel(
+                    $relation,
+                    $newModel
+                );
             }
         } elseif ($this->shouldUpdateRelation($model, $relation)) {
-            $this->updateRelationModelFromObject($model, $relation, $object);
+            $this->updateRelationModel($model, $relation, $relationModel);
         }
-        return $id;
+        return $relationKey;
     }
 
-    protected function getRelationIdFromObject($relation, $object)
+    protected function createRelationModel($model, $relation, $relationModel)
     {
-        $method = 'get'.studly_case($relation).'RelationIdFromObject';
+        $method = sprintf('create%sRelationModel', studly_case($relation));
         if (method_exists($this, $method)) {
-            return $this->{$method}($relation, $object);
+            return $this->{$method}($model, $relation, $relationModel);
         }
-
-        if (!is_object($object) && !is_array($object)) {
-            return $object;
-        }
-
-        if (is_array($object)) {
-            if (isset($object['id'])) {
-                return (string)$object['id'];
-            }
-            return null;
-        }
-        return (string)$object->id;
-    }
-
-    protected function createRelationModelFromObject($model, $relation, $object)
-    {
-        $method = 'create'.studly_case($relation).'RelationModelFromObject';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relation, $object);
-        }
-
-        $relationModel = $model->{$relation}()->getModel();
-        $relationModel->fill($object);
         $relationModel->save();
         return $relationModel;
     }
 
-    protected function updateRelationModelFromObject($model, $relation, $object)
+    protected function updateRelationModel($model, $relation, $relationModel)
     {
-        $method = 'update'.studly_case($relation).'RelationModelFromObject';
+        $method = sprintf('update%sRelationModel', studly_case($relation));
         if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relation, $object);
+            return $this->{$method}($model, $relation, $relationModel);
         }
-
-        $relationId = $this->getRelationIdFromObject($relation, $object);
-        if (!is_null($relationId)) {
-            $relationModel = $model->{$relation}()->getModel();
-            $modelToUpdate = $relationModel::findOrFail($relationId);
-            if (!is_null($modelToUpdate)) {
-                $modelToUpdate->fill((array)$object);
-                $modelToUpdate->save();
-            }
-        }
+        $relationModel->save();
+        return $relationModel;
     }
 
-    protected function updateRelationAtPathWithItem($model, $relation, $path, $item)
+    protected function getRelationKeyFromModel($relation, Model $model)
     {
-        $method = 'update'.studly_case($relation).'RelationAtPathWithItem';
+        $method = sprintf('get%sRelationKeyFromModel', studly_case($relation));
         if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relation, $path, $item);
+            return $this->{$method}($relation, $model);
         }
-        $this->detachRelationAtPath($model, $relation, $path);
-        if (!is_null($item)) {
-            $this->attachRelationAtPath($model, $relation, $path, $item);
-        }
+
+        return isset($model) && $model->exists
+            ? (string) $model->getKey()
+            : null;
     }
 
-    protected function updateRelationsAtPathWithItems($model, $relation, $path, $items)
+    protected function getRelatedModel($model, $relation)
     {
-        $method = 'update'.studly_case($relation).'RelationsAtPathWithItems';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relation, $path, $items);
-        }
-
-        $this->detachRelationsAtPath($model, $relation, $path, $items);
+        return $model->$relation()->getRelated();
     }
 
-    protected function detachRelationAtPath($model, $relation, $path)
+    protected function findRelationFromKey($model, $relation, $key)
     {
-        $method = 'detach'.studly_case($relation).'RelationByPath';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relation, $path);
-        }
-
-        $currentItem = $this->getRelationCurrentItemAtPath($model, $relation, $path);
-        if ($currentItem) {
-            $pathColumn = $this->getRelationPathColumn($relation);
-            return $this->detachRelationFromModel($model, $relation, $currentItem, [
-                $pathColumn => null,
-            ]);
-        }
-    }
-
-    protected function detachRelationsAtPath($model, $relation, $path)
-    {
-        $method = 'detach'.studly_case($relation).'RelationsAtPath';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($model, $relation, $path);
-        }
-
-        $pathColumn = $this->getRelationPathColumn($relation);
-        $currentItems = $model->{$relation}()->wherePivot($pathColumn, 'like', $path.'%')->get();
-        if (!$currentItems->isEmpty()) {
-            $pathColumn = $this->getRelationPathColumn($relation);
-            $currentItems->each(function ($item) use ($model, $relation, $pathColumn) {
-                $this->detachRelationFromModel($model, $relation, $item, [
-                    $pathColumn => null,
-                ]);
-            });
-        }
-    }
-
-    protected function attachRelationAtPath($model, $relation, $path, $item)
-    {
-        $method = 'attach'.studly_case($relation).'RelationWithPath';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($id, $path);
-        }
-
-        $pathColumn = $this->getRelationPathColumn($relation);
-        return $this->attachRelationToModel($model, $relation, $item, [
-            $pathColumn => $path,
-        ]);
-    }
-
-    protected function attachRelationToModel($model, $relation, $item, $pivot)
-    {
-        $relationClass = $model->{$relation}();
-        if ($relationClass instanceof HasOneOrMany) {
-            $method = method_exists($relationClass, 'getForeignKeyName') ?
-                'getForeignKeyName' : 'getPlainForeignKey';
-            $item->setAttribute($relationClass->$method(), $model->id);
-            foreach ($pivot as $column => $value) {
-                $item->setAttribute($column, $value);
-            }
-            $item->save();
-            return $item;
-        } else {
-            return $relationClass->attach($item, $pivot);
-        }
-    }
-
-    protected function detachRelationFromModel($model, $relation, $item, $pivot)
-    {
-        $column = $this->getRelationPathColumn($relation);
-        $relationClass = $model->{$relation}();
-        if ($relationClass instanceof HasOneOrMany) {
-            $method = method_exists($relationClass, 'getForeignKeyName')
-                ? 'getForeignKeyName'
-                : 'getPlainForeignKey';
-            $item->setAttribute($relationClass->$method(), null);
-            foreach ($pivot as $column => $value) {
-                $item->setAttribute($column, $value);
-            }
-            $item->save();
-        } else if ($relationClass instanceof BelongsToMany) {
-            $itemKey = method_exists($relationClass, 'getQualifiedParentKeyName')
-                ? last(explode('.', $relationClass->getQualifiedParentKeyName()))
-                : $item->getKeyName();
-            $query = $model->{$relation}()->newPivotStatementForId($item->{$itemKey})
-                ->where($column, $item->pivot->{$column});
-            $query->delete();
-        }
-    }
-
-    protected function getRelationCurrentItemAtPath($model, $relation, $path)
-    {
-        if (is_null($path)) {
-            return null;
-        }
-
-        $pathColumn = $this->getRelationPathColumn($relation);
-        $currentItem = $model->{$relation}()->wherePivot($pathColumn, '=', $path)->first();
-        return $currentItem;
-    }
-
-    protected function getRelationPathColumn($relation)
-    {
-        $method = 'get'.studly_case($relation).'RelationPathColumn';
-        if (method_exists($this, $method)) {
-            return $this->{$method}($relation);
-        }
-        return 'handle';
+        $relationModel = $this->getRelatedModel($model, $relation);
+        $keyName = $relationModel->getKeyName();
+        return $relationModel
+            ->newQuery()
+            ->where($keyName, $key)
+            ->first();
     }
 }

@@ -8,19 +8,7 @@ interface HasJsonSchema
 
     public function saveJsonSchemaAttributes();
 
-    public function getJsonSchemaAttributes();
-
     public function getAttributeJsonSchema($key);
 
-    public function getAttributeJsonSchemaReducers($key);
-
     public function attributeHasJsonSchema($key);
-
-    public function getJsonSchemas();
-
-    public function setJsonSchemas($schemas);
-
-    public function getJsonSchemaReducers();
-
-    public function setJsonSchemaReducers($key, $reducers = null);
 }
