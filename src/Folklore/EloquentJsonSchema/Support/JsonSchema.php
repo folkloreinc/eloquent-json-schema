@@ -415,17 +415,17 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
      * @param  string  $key
      * @return void
      */
-     public function __call($method, $parameters)
-     {
-         if (preg_match('/^(get|set|with)([A-Z].*)$/i', $method, $matches)) {
-             $methodAttribute = Str::snake($matches[2]);
-             $foundAttribute = Arr::first($this->schemaAttributes, function($attribute) use ($methodAttribute) {
-                 return $methodAttribute === Str::snake($attribute);
-             });
-             if (!is_null($foundAttribute)) {
-                 $methodPrefix = $matches[1] === 'with' ? 'get' : $matches[1];
-                 return $this->{$methodPrefix.'SchemaAttribute'}($foundAttribute);
-             }
-         }
-     }
+    public function __call($method, $parameters)
+    {
+        if (preg_match('/^(get|set|with)([A-Z].*)$/i', $method, $matches)) {
+            $methodAttribute = Str::snake($matches[2]);
+            $foundAttribute = Arr::first($this->schemaAttributes, function ($attribute) use ($methodAttribute) {
+                return $methodAttribute === Str::snake($attribute);
+            });
+            if (!is_null($foundAttribute)) {
+                $methodPrefix = $matches[1] === 'with' ? 'get' : $matches[1];
+                return $this->{$methodPrefix.'SchemaAttribute'}($foundAttribute);
+            }
+        }
+    }
 }
