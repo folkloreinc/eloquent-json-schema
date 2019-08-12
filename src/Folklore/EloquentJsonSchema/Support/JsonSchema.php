@@ -69,9 +69,6 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
         }
 
         foreach ($properties as $key => $value) {
-            if (is_null($value)) {
-                dd($key, $value);
-            }
             $propertyAppends = $value->getAppends();
             if (sizeof($propertyAppends)) {
                 foreach ($propertyAppends as $propertyKey => $propertyValue) {
