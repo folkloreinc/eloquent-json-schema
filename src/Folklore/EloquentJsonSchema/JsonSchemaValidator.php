@@ -29,7 +29,7 @@ class JsonSchemaValidator
         $this->validator->validate(
             $valueObject,
             $schemaObject,
-            Constraint::CHECK_MODE_APPLY_DEFAULTS
+            Constraint::CHECK_MODE_APPLY_DEFAULTS | Constraint::CHECK_MODE_TYPE_CAST
         );
         return $this->validator->isValid();
     }
