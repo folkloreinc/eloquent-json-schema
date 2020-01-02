@@ -51,17 +51,14 @@ class NodesCollection extends Collection
             $propertyPath = $name;
             $schemaNode = new Node();
             $schemaNode->path = $propertyPath;
+            $schemaNode->schema = $propertySchema;
 
             if ($propertySchema instanceof JsonSchemaContract) {
-                $schemaNode->type = $propertySchema->getName();
-                $schemaNode->schema = $propertySchema;
-
-                $nodes->push($schemaNode);
+                $schemaNode->type = $propertySchema->geType();
                 $propertyNodes = static::getNodes($propertySchema)->prependPath($propertyPath);
-                $nodes = $nodes->merge($propertyNodes);
+                $nodes = $nodes->push($schemaNode)->merge($propertyNodes);
             } else {
                 $schemaNode->type = array_get($propertySchema, 'type');
-
                 $nodes->push($schemaNode);
             }
         }

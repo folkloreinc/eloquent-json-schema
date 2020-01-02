@@ -15,6 +15,8 @@ use Folklore\EloquentJsonSchema\Contracts\Reducer\Commit as CommitReducer;
 
 trait HasJsonSchema
 {
+    protected $jsonSchemas = [];
+
     protected $savingJsonSchemas = false;
 
     public static function bootHasJsonSchema()
@@ -87,7 +89,7 @@ trait HasJsonSchema
     {
         $value = parent::getAttributeValue($key);
         if ($this->attributeHasJsonSchema($key)) {
-            $value = $this->fromJsonSchema($key, $value);
+            $value = $this->mutateAttributeValueFromJsonSchema($key, $value);
             $value = $this->removeAttributeJsonSchemaMetadata($key, $value);
         }
         return $value;
@@ -104,34 +106,32 @@ trait HasJsonSchema
     {
         if ($this->attributeHasJsonSchema($key)) {
             $value = $this->ensureAttributeJsonSchemaMetadata($key, $value);
-            $value = $this->castAttributeAsJsonSchema($key, $value);
+            $value = $this->mutateToAttributeValueFromJsonSchema($key, $value);
         }
         return parent::setAttribute($key, $value);
     }
 
     /**
-     * Cast the given attribute to JSON Schema.
+     * Mutate an attribute to a json schema value
+     *
+     * @param  mixed  $value
+     * @return array|StdClass
+     */
+    protected function mutateAttributeValueFromJsonSchema($key, $value)
+    {
+        return $this->executeJsonSchemaReducers($key, 'get', $value);
+    }
+
+    /**
+     * Mutate a json schema value to an attribute
      *
      * @param  mixed  $value
      * @param  \Folklore\EloquentJsonSchema\Contracts\JsonSchema  $schema
      * @return string
      */
-    protected function castAttributeAsJsonSchema($key, $value)
+    protected function mutateToAttributeValueFromJsonSchema($key, $value)
     {
-        $value = $this->executeJsonSchemaReducers($key, 'set', $value);
-        return $value;
-    }
-
-    /**
-     * Return a json object from schema
-     *
-     * @param  mixed  $value
-     * @return array|StdClass
-     */
-    protected function fromJsonSchema($key, $value)
-    {
-        $value = $this->executeJsonSchemaReducers($key, 'get', $value);
-        return $value;
+        return $this->mutateJsonSchemaReducers($key, 'set', $value);
     }
 
     /**
@@ -142,9 +142,9 @@ trait HasJsonSchema
      *
      * @throws \LogicException
      */
-    protected function getJsonSchemaFromMethod($method)
+    protected function getJsonSchemaFromMethod($key)
     {
-        $schema = $this->$method();
+        $schema = $this->{'get' . Str::studly($key) . 'JsonSchema'}();
 
         if (!$schema instanceof JsonSchemaContract) {
             throw new LogicException(
@@ -178,7 +178,7 @@ trait HasJsonSchema
      */
     public function attributeHasJsonSchema($key)
     {
-        return method_exists($this, $key) && $this->isJsonCastable($key);
+        return method_exists($this, 'get' . Str::studly($key) . 'JsonSchema');
     }
 
     /**
@@ -224,7 +224,7 @@ trait HasJsonSchema
         $namespace = $this->getJsonSchemaMetadataNamespace();
         if (is_array($value) && isset($value[$namespace])) {
             unset($value[$namespace]);
-        } else if (is_object($value) && isset($value->{$namespace})) {
+        } elseif (is_object($value) && isset($value->{$namespace})) {
             unset($value->{$namespace});
         }
         return $value;
@@ -260,6 +260,37 @@ trait HasJsonSchema
     public function getJsonSchemaMetadataNamespace()
     {
         return '_json_schema_metadata';
+    }
+
+    protected function getJsonSchemaMutatorsFromNode($node)
+    {
+        $mutators = [];
+        if ($node->schema instanceof JsonSchemaContract) {
+            $mutators = $node->schema->getMutators();
+        }
+    }
+
+    protected function mutateWithJsonSchema($key, $value, $method)
+    {
+        $schema = $this->getAttributeJsonSchema($key);
+        $nodes = NodesCollection::makeFromSchema($schema, $value)->setAttribute(
+            $key
+        );
+
+        return $nodes->reduce(
+            function ($value, $node) use ($method) {
+                $mutators = $this->getJsonSchemaMutatorsFromNode($node);
+                return $mutators->reduce(function ($value, $mutator) use (
+                    $method
+                ) {
+                    return method_exists($mutator, $method)
+                        ? $mutator->{$method}($value)
+                        : $mutator($value);
+                },
+                $value);
+            },
+            is_object($value) ? clone $value : $value
+        );
     }
 
     /**

@@ -12,10 +12,18 @@ use Folklore\EloquentJsonSchema\Contracts\JsonSchema as JsonSchemaContract;
 use Folklore\EloquentJsonSchema\Node;
 use Folklore\EloquentJsonSchema\NodesCollection;
 
-class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, JsonSchemaContract
+class JsonSchema implements
+    ArrayAccess,
+    Arrayable,
+    Jsonable,
+    JsonSerializable,
+    JsonSchemaContract
 {
-    protected $name;
+    protected $schema = 'http://json-schema.org/draft-07/schema#';
+    protected $id = 'id';
     protected $type = 'object';
+    protected $title;
+    protected $description;
     protected $nullable = true;
     protected $properties;
     protected $required;
@@ -24,7 +32,20 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     protected $enum;
     protected $attributes = [];
     protected $reducers;
-    protected $schemaAttributes = ['nullable', 'type', 'properties', 'required', 'default', 'items', 'enum', 'appends'];
+    protected $schemaAttributes = [
+        '$schema',
+        '$id',
+        'description',
+        'title',
+        'nullable',
+        'type',
+        'properties',
+        'required',
+        'default',
+        'items',
+        'enum',
+        'appends'
+    ];
 
     public function __construct($schema = [])
     {
@@ -39,20 +60,6 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
             }
         }
         $this->attributes = array_except($schema, $this->schemaAttributes);
-    }
-
-    public function setName($name)
-    {
-        $this->name = $name;
-        return $this;
-    }
-
-    public function getName()
-    {
-        $class = get_class($this);
-        $defaultType = $class !== self::class ? class_basename($class) : $this->type;
-        $defaultName = isset($this->name) ? $this->name : $defaultType;
-        return method_exists($this, 'name') ? $this->name() : $defaultName;
     }
 
     public function getAppends()
@@ -73,9 +80,9 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
             if (sizeof($propertyAppends)) {
                 foreach ($propertyAppends as $propertyKey => $propertyValue) {
                     if (is_numeric($propertyKey)) {
-                        $appends[$propertyValue] = $key.'.'.$propertyValue;
+                        $appends[$propertyValue] = $key . '.' . $propertyValue;
                     } else {
-                        $appends[$propertyKey] = $key.'.'.$propertyValue;
+                        $appends[$propertyKey] = $key . '.' . $propertyValue;
                     }
                 }
             }
@@ -139,7 +146,10 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
 
         if (is_string($items)) {
             return app($items);
-        } elseif ($items instanceof JsonSchemaContract || (is_array($items) && isset($items['type']))) {
+        } elseif (
+            $items instanceof JsonSchemaContract ||
+            (is_array($items) && isset($items['type']))
+        ) {
             return $items;
         }
 
@@ -154,6 +164,16 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     public function setItems($value)
     {
         return $this->setSchemaAttribute('items', $value);
+    }
+
+    public function getId()
+    {
+        return $this->getSchemaAttribute('$id');
+    }
+
+    public function setId($value)
+    {
+        return $this->setSchemaAttribute('$id', $value);
     }
 
     public function getType()
@@ -213,7 +233,10 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
 
     public function setReducers($value)
     {
-        return $this->setSchemaAttribute('reducers', !is_null($value) ? $value : null);
+        return $this->setSchemaAttribute(
+            'reducers',
+            !is_null($value) ? $value : null
+        );
     }
 
     public function addReducer($value)
@@ -250,19 +273,19 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     {
         $nullable = $this->getNullable();
         $type = $this->getType();
-        $name = $this->getName();
+        $id = $this->getId();
 
         // @TODO Add condition to check for array
         $schema = [
-            'type' => $nullable ? array_merge(['null'], (array)$type) : $type,
+            'type' => $nullable ? array_merge(['null'], (array) $type) : $type
         ];
-        if ($name !== $type) {
-            $schema['name'] = $name;
+        if (!empty($id)) {
+            $schema['$id'] = $id;
         }
 
         foreach ($this->schemaAttributes as $attribute) {
-            if (method_exists($this, 'get'.studly_case($attribute))) {
-                $value = $this->{'get'.studly_case($attribute)}();
+            if (method_exists($this, 'get' . studly_case($attribute))) {
+                $value = $this->{'get' . studly_case($attribute)}();
             } elseif (isset($this->{$attribute})) {
                 $value = $this->{$attribute};
             }
@@ -275,13 +298,15 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
             $properties = $this->getProperties();
             $schema['properties'] = [];
             foreach ($properties as $name => $value) {
-                $schema['properties'][$name] = $value instanceof Arrayable ? $value->toArray() : $value;
+                $schema['properties'][$name] =
+                    $value instanceof Arrayable ? $value->toArray() : $value;
             }
         }
 
         if (isset($schema['items'])) {
             $items = $this->getItems();
-            $schema['items'] = $items instanceof Arrayable ? $items->toArray() : $items;
+            $schema['items'] =
+                $items instanceof Arrayable ? $items->toArray() : $items;
         }
 
         $attributes = $this->getAttributes();
@@ -416,12 +441,16 @@ class JsonSchema implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, 
     {
         if (preg_match('/^(get|set|with)([A-Z].*)$/i', $method, $matches)) {
             $methodAttribute = Str::snake($matches[2]);
-            $foundAttribute = Arr::first($this->schemaAttributes, function ($attribute) use ($methodAttribute) {
+            $foundAttribute = Arr::first($this->schemaAttributes, function (
+                $attribute
+            ) use ($methodAttribute) {
                 return $methodAttribute === Str::snake($attribute);
             });
             if (!is_null($foundAttribute)) {
                 $methodPrefix = $matches[1] === 'with' ? 'get' : $matches[1];
-                return $this->{$methodPrefix.'SchemaAttribute'}($foundAttribute);
+                return $this->{$methodPrefix . 'SchemaAttribute'}(
+                    $foundAttribute
+                );
             }
         }
     }
